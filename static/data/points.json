@@ -1,0 +1,467 @@
+{
+ "count": 34916,
+ "terms": 34916,
+ "entries": 62066,
+ "definitions": 103476,
+ "rule": "one dot per term, at its entry with the most definitions; ties: the smallest mention_id",
+ "layout": "uint16 x,y,z per point (little endian), then uint8 topic per point",
+ "decode": {
+  "offset": -11.04,
+  "scale": 0.000336919203479057
+ },
+ "topics": [
+  {
+   "id": 0,
+   "name": "social media · social bots · memes",
+   "label": "social media",
+   "rgb": [
+    254,
+    128,
+    114
+   ]
+  },
+  {
+   "id": 1,
+   "name": "metaphor · conceptual metaphors · presupposition",
+   "label": "metaphor",
+   "rgb": [
+    71,
+    233,
+    254
+   ]
+  },
+  {
+   "id": 2,
+   "name": "populism · polarization · public sphere",
+   "label": "populism",
+   "rgb": [
+    10,
+    134,
+    243
+   ]
+  },
+  {
+   "id": 3,
+   "name": "ideology · neoliberalism · nationalism",
+   "label": "ideology",
+   "rgb": [
+    162,
+    184,
+    1
+   ]
+  },
+  {
+   "id": 4,
+   "name": "framing · frames · framing theory",
+   "label": "framing",
+   "rgb": [
+    230,
+    6,
+    175
+   ]
+  },
+  {
+   "id": 5,
+   "name": "heuristics · Elaboration Likelihood Model (ELM) · empathy",
+   "label": "heuristics",
+   "rgb": [
+    183,
+    148,
+    253
+   ]
+  },
+  {
+   "id": 6,
+   "name": "journalism · gatekeepers · peace journalism",
+   "label": "journalism",
+   "rgb": [
+    90,
+    154,
+    10
+   ]
+  },
+  {
+   "id": 7,
+   "name": "homophily · stereotypes · identity",
+   "label": "homophily",
+   "rgb": [
+    253,
+    188,
+    209
+   ]
+  },
+  {
+   "id": 8,
+   "name": "othering · representational harms · discrimination",
+   "label": "othering",
+   "rgb": [
+    246,
+    0,
+    90
+   ]
+  },
+  {
+   "id": 9,
+   "name": "media · mediatization · media logic",
+   "label": "media",
+   "rgb": [
+    23,
+    242,
+    209
+   ]
+  },
+  {
+   "id": 10,
+   "name": "cognitive dissonance · cognitive dissonance theory · third-person effect",
+   "label": "cognitive dissonance",
+   "rgb": [
+    11,
+    158,
+    111
+   ]
+  },
+  {
+   "id": 11,
+   "name": "news · news values · hard news",
+   "label": "news",
+   "rgb": [
+    255,
+    179,
+    252
+   ]
+  },
+  {
+   "id": 12,
+   "name": "morality · ethics · freedom of expression",
+   "label": "morality",
+   "rgb": [
+    25,
+    192,
+    211
+   ]
+  },
+  {
+   "id": 13,
+   "name": "clickbait · satire · sarcasm",
+   "label": "clickbait",
+   "rgb": [
+    250,
+    137,
+    6
+   ]
+  },
+  {
+   "id": 14,
+   "name": "misinformation · disinformation · infodemic",
+   "label": "misinformation",
+   "rgb": [
+    13,
+    205,
+    84
+   ]
+  },
+  {
+   "id": 15,
+   "name": "credibility · trust · source credibility",
+   "label": "credibility",
+   "rgb": [
+    198,
+    225,
+    1
+   ]
+  },
+  {
+   "id": 16,
+   "name": "hate speech · cyberbullying · toxicity",
+   "label": "hate speech",
+   "rgb": [
+    215,
+    199,
+    253
+   ]
+  },
+  {
+   "id": 17,
+   "name": "propaganda · computational propaganda · astroturfing",
+   "label": "propaganda",
+   "rgb": [
+    162,
+    217,
+    253
+   ]
+  },
+  {
+   "id": 18,
+   "name": "fact-checking · fake news detection · rumor detection",
+   "label": "fact-checking",
+   "rgb": [
+    122,
+    107,
+    255
+   ]
+  },
+  {
+   "id": 19,
+   "name": "discourse · Critical Discourse Analysis (CDA) · discourse analysis",
+   "label": "discourse",
+   "rgb": [
+    255,
+    117,
+    170
+   ]
+  },
+  {
+   "id": 20,
+   "name": "infodemic · information · information overload",
+   "label": "infodemic",
+   "rgb": [
+    190,
+    208,
+    255
+   ]
+  },
+  {
+   "id": 21,
+   "name": "narrative · event · storytelling",
+   "label": "narrative",
+   "rgb": [
+    255,
+    201,
+    39
+   ]
+  },
+  {
+   "id": 22,
+   "name": "bias · gender bias · implicit bias",
+   "label": "bias",
+   "rgb": [
+    7,
+    250,
+    104
+   ]
+  },
+  {
+   "id": 23,
+   "name": "deepfakes · hallucinations · cheapfakes",
+   "label": "deepfakes",
+   "rgb": [
+    149,
+    136,
+    10
+   ]
+  },
+  {
+   "id": 24,
+   "name": "fake news · hoaxes · false news",
+   "label": "fake news",
+   "rgb": [
+    253,
+    192,
+    183
+   ]
+  },
+  {
+   "id": 25,
+   "name": "sentiment analysis · sentiment · attitude",
+   "label": "sentiment analysis",
+   "rgb": [
+    192,
+    34,
+    254
+   ]
+  },
+  {
+   "id": 26,
+   "name": "gender · intersectionality · gender stereotypes",
+   "label": "gender",
+   "rgb": [
+    15,
+    153,
+    151
+   ]
+  },
+  {
+   "id": 27,
+   "name": "rumor · conspiracy theories · post-truth",
+   "label": "rumor",
+   "rgb": [
+    254,
+    87,
+    254
+   ]
+  },
+  {
+   "id": 28,
+   "name": "prebunking · backfire effect · inoculation theory",
+   "label": "prebunking",
+   "rgb": [
+    19,
+    148,
+    183
+   ]
+  },
+  {
+   "id": 29,
+   "name": "fairness · individual fairness · group fairness",
+   "label": "fairness",
+   "rgb": [
+    135,
+    167,
+    254
+   ]
+  },
+  {
+   "id": 30,
+   "name": "confirmation bias · selective exposure · motivated reasoning",
+   "label": "confirmation bias",
+   "rgb": [
+    220,
+    85,
+    0
+   ]
+  },
+  {
+   "id": 31,
+   "name": "stance detection · stance · stance classification",
+   "label": "stance detection",
+   "rgb": [
+    45,
+    183,
+    255
+   ]
+  },
+  {
+   "id": 32,
+   "name": "agenda setting · agenda-setting theory · second-level agenda-setting",
+   "label": "agenda setting",
+   "rgb": [
+    210,
+    164,
+    18
+   ]
+  },
+  {
+   "id": 33,
+   "name": "media bias · political bias · bias",
+   "label": "media bias",
+   "rgb": [
+    253,
+    195,
+    152
+   ]
+  },
+  {
+   "id": 34,
+   "name": "media literacy · information literacy · media and information literacy",
+   "label": "media literacy",
+   "rgb": [
+    181,
+    119,
+    0
+   ]
+  },
+  {
+   "id": 35,
+   "name": "echo chambers · filter bubbles · echo chamber effect",
+   "label": "echo chambers",
+   "rgb": [
+    2,
+    198,
+    171
+   ]
+  }
+ ],
+ "labels": [
+  {
+   "topic": 33,
+   "text": "media bias",
+   "at": [
+    1.69,
+    -7.09,
+    3.182
+   ]
+  },
+  {
+   "topic": 24,
+   "text": "fake news",
+   "at": [
+    -10.272,
+    1.401,
+    0.555
+   ]
+  },
+  {
+   "topic": 4,
+   "text": "framing",
+   "at": [
+    6.668,
+    5.189,
+    -3.242
+   ]
+  },
+  {
+   "topic": 34,
+   "text": "media literacy",
+   "at": [
+    0.387,
+    -2.691,
+    -7.152
+   ]
+  },
+  {
+   "topic": 25,
+   "text": "sentiment analysis",
+   "at": [
+    -1.12,
+    3.936,
+    3.691
+   ]
+  },
+  {
+   "topic": 3,
+   "text": "ideology",
+   "at": [
+    4.062,
+    -0.818,
+    0.789
+   ]
+  },
+  {
+   "topic": 35,
+   "text": "echo chambers",
+   "at": [
+    -0.57,
+    -8.372,
+    -3.456
+   ]
+  },
+  {
+   "topic": 17,
+   "text": "propaganda",
+   "at": [
+    -4.805,
+    -2.121,
+    1.655
+   ]
+  },
+  {
+   "topic": 11,
+   "text": "news",
+   "at": [
+    -0.336,
+    3.051,
+    -4.556
+   ]
+  },
+  {
+   "topic": 16,
+   "text": "hate speech",
+   "at": [
+    2.932,
+    0.719,
+    6.287
+   ]
+  }
+ ],
+ "bin_sha256": "329c6beef9a178eca729f3b61cb45194c6086d1da2e005586b568a8a73cfa0b8"
+}

@@ -1,0 +1,21 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<!-- Renders static/images/social_preview.png (1200 x 630). Serve the page folder, then:
+     google-chrome --headless=new --use-angle=swiftshader --enable-unsafe-swiftshader --hide-scrollbars --window-size=1200,630 --virtual-time-budget=8000 --screenshot=static/images/social_preview.png http://localhost:8000/scripts/social_preview.html -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../static/css/index.css"><link rel="stylesheet" href="../static/css/mbdef.css">
+<style>
+html,body{margin:0;width:1200px;height:630px;overflow:hidden;background:#fff}
+.wrap{position:relative;width:1200px;height:630px;display:grid;grid-template-columns:400px 1fr}
+.txt{padding:64px 0 0 64px;font-family:Inter,sans-serif;color:#151617}
+.txt h1{font-size:64px;font-weight:800;line-height:1.02;margin:0 0 18px}
+.txt p{font-size:24px;line-height:1.35;color:#2e2b39;margin:0 0 28px}
+.txt .n{font-size:20px;color:#64748b;line-height:1.6}.txt .n b{color:#151617;font-size:24px}
+.map3d{height:630px!important;max-height:none!important;border-radius:0;border:none;box-shadow:none}
+.map3d-label{font-size:15px}
+</style></head><body><div class="wrap">
+<div class="txt"><h1>MBDef</h1><p>A Media Bias Definitions Dataset</p>
+<div class="n"><b>103,476</b> definitions<br><b>34,916</b> terms<br><b>6,115</b> papers</div></div>
+<div class="map3d" id="map3d" data-src="../static/data/points" data-radius="9"><canvas></canvas><div class="map3d-labels"></div><p class="map3d-note" hidden></p></div>
+</div>
+<script>matchMedia=(q)=>({matches:q.includes('reduce'),addEventListener(){}});</script>
+<script src="../static/js/map3d.js"></script></body></html>

@@ -1,0 +1,120 @@
+/* styles of the disciplines figure (its own file): one row per field, opened in place */
+
+.dsc-legend { align-items: center; }
+.dsc-legend b { color: var(--fig-ink); font-weight: 600; margin-right: 0.25rem; }
+.dsc-hint { margin-left: auto; font-family: var(--fig-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fig-accent); }
+.dsc.is-narrow .dsc-hint { margin-left: 0; }
+
+/* the rows: name | bar on the shared scale | total and share */
+.dsc-chart { --lab: 19.5rem; --val: 7.5rem; --grid: var(--fig-grid); position: relative; }
+.dsc-btn, .dsc-sub {
+  appearance: none; font: inherit; color: inherit; background: none; border: 0; margin: 0; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: var(--lab) minmax(0, 1fr) var(--val); align-items: center; column-gap: 0.9rem;
+  width: 100%; border-radius: 8px;
+}
+.dsc-btn { padding: 0.3rem 0.5rem; min-height: 2.15rem; }
+.dsc-btn:hover, .dsc-row.is-open > .dsc-btn { background: var(--fig-panel-2); }
+.dsc-btn:focus-visible, .dsc-sub:focus-visible, .dsc-reset:focus-visible { outline: 2px solid var(--fig-accent); outline-offset: 1px; }
+.dsc-name { font-size: 0.9rem; line-height: 1.25; color: var(--fig-ink); min-width: 0; }
+.dsc-name small { display: block; font-size: 0.74rem; color: var(--fig-faint); }
+.dsc-btn .dsc-name { text-align: right; }
+.dsc-row.is-open > .dsc-btn .dsc-name { color: #fff; font-weight: 600; }
+.dsc-btn .dsc-name::before { content: '+'; display: inline-block; width: 1em; margin-right: 0.3rem; text-align: center; font-family: var(--fig-mono); font-size: 0.8rem; color: var(--fig-faint); }
+.dsc-row.is-open > .dsc-btn .dsc-name::before { content: '\2013'; color: var(--fig-accent); }
+.dsc-btn:hover .dsc-name::before { color: var(--fig-accent); }
+
+.dsc-track { position: relative; display: block; height: 1.25rem; }
+.dsc-chart > .dsc-row > .dsc-btn .dsc-track {
+  align-self: stretch; height: auto; min-height: 1.25rem; margin: -0.3rem 0;
+  background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px);
+  background-size: var(--dsc-grid, 25%) 100%; box-shadow: inset -1px 0 0 var(--grid);
+}
+.dsc-bar { position: absolute; left: 0; top: 0; bottom: 0; display: flex; min-width: 2px; border-radius: 0 3px 3px 0; overflow: hidden; transform-origin: left center; }
+.dsc-chart > .dsc-row > .dsc-btn .dsc-bar { top: 50%; bottom: auto; height: 1.25rem; margin-top: -0.625rem; }
+.dsc-bar i { position: relative; display: block; height: 100%; flex: none; font-style: normal; }
+.dsc-bar i + i { box-shadow: inset 1px 0 0 rgba(17, 24, 34, 0.55); }
+.dsc-s { background: var(--fig-seed); }
+.dsc-c { background: var(--fig-closure); }
+.dsc-bar i span {
+  position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+  font-family: var(--fig-display); font-size: 0.84rem; font-weight: 600; color: #0d141d; font-variant-numeric: tabular-nums;
+}
+.dsc-bar i.fits span { display: flex; }
+.dsc-val { display: flex; align-items: baseline; gap: 0.5rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dsc-val b { font-family: var(--fig-display); font-weight: 600; font-size: 1.05rem; color: #fff; min-width: 2.9em; text-align: right; }
+.dsc-val span { font-size: 0.78rem; color: var(--fig-muted); }
+
+
+.dsc-row.is-uncl { margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed var(--fig-line); }
+
+/* the axis under the rows */
+.dsc-axis { display: grid; grid-template-columns: var(--lab) minmax(0, 1fr) var(--val); column-gap: 0.9rem; padding: 0 0.5rem 0.3rem; }
+.dsc-ticks { position: relative; height: 1.1rem; }
+.dsc-ticks span { position: absolute; top: 0; transform: translateX(-50%); font-family: var(--fig-mono); font-size: 0.7rem; color: var(--fig-faint); }
+.dsc-ticks span:first-child { transform: none; }
+.dsc-ticks span:last-child { transform: translateX(-100%); }
+.dsc-axis-lab { font-family: var(--fig-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fig-faint); }
+
+/* one entrance: the bars grow from zero */
+.dsc-chart.is-pre > .dsc-row > .dsc-btn .dsc-bar { transform: scaleX(0); }
+.dsc-chart.is-grow > .dsc-row > .dsc-btn .dsc-bar { transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1); transition-delay: calc(var(--i, 0) * 55ms); }
+
+/* an opened field */
+.dsc-row.is-open { background: rgba(255, 255, 255, 0.025); border-radius: 8px; margin-bottom: 0.4rem; }
+.dsc-detail { padding: 0.9rem 0.9rem 1rem 1.6rem; }
+.dsc-detail-in { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 1.25rem 2.25rem; }
+.dsc-col { min-width: 0; }
+.dsc-k { margin: 0 0 0.25rem; font-family: var(--fig-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fig-muted); }
+.dsc-src { margin-left: 0.6rem; padding: 0.05rem 0.4rem; border-radius: 999px; border: 1px solid var(--fig-line); color: var(--fig-faint); letter-spacing: 0.04em; }
+.dsc-src.is-today { color: var(--fig-warm); border-color: rgba(255, 184, 107, 0.35); }
+.dsc-cap { margin: 0 0 0.55rem; font-size: 0.8rem; line-height: 1.45; color: var(--fig-muted); }
+.dsc-text { margin: 0 0 0.5rem; font-size: 0.86rem; line-height: 1.5; color: var(--fig-muted); }
+
+.dsc-subs { display: flex; flex-direction: column; gap: 0.15rem; }
+.dsc-sub { --lab: 12.5rem; --val: 5.6rem; padding: 0.22rem 0.4rem; column-gap: 0.7rem; }
+.dsc-sub .dsc-name { font-size: 0.84rem; }
+.dsc-sub .dsc-track { height: 0.85rem; background: rgba(255, 255, 255, 0.05); border-radius: 3px; }
+.dsc-sub .dsc-val b { font-size: 0.95rem; min-width: 2.6em; }
+.dsc-sub:hover { background: var(--fig-panel-2); }
+.dsc-sub[aria-pressed="true"] { background: rgba(165, 156, 255, 0.16); box-shadow: inset 2px 0 0 var(--fig-accent); }
+.dsc-sub[aria-pressed="true"] .dsc-name { color: #fff; }
+.dsc-subs.is-static .dsc-sub { cursor: default; }
+
+.dsc-phead { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; }
+.dsc-reset { appearance: none; background: none; border: 0; padding: 0; font: inherit; font-size: 0.8rem; font-weight: 600; color: var(--fig-accent); cursor: pointer; white-space: nowrap; }
+.dsc-papers { list-style: none; margin: 0.15rem 0 0.6rem; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+.dsc-papers li { display: grid; grid-template-columns: 0.6rem minmax(0, 1fr); column-gap: 0.55rem; }
+.dsc-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; margin-top: 0.42em; grid-row: span 2; }
+.dsc-ptitle { font-size: 0.88rem; line-height: 1.4; color: var(--fig-ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.dsc-pmeta { font-family: var(--fig-mono); font-size: 0.7rem; color: var(--fig-faint); }
+.dsc-none { font-size: 0.84rem; color: var(--fig-muted); }
+
+.dsc-note { margin: 0.9rem 0 0; padding: 0.55rem 0.75rem; border-left: 2px solid var(--fig-warm); background: rgba(255, 184, 107, 0.06); border-radius: 0 6px 6px 0; font-size: 0.82rem; line-height: 1.5; color: var(--fig-muted); }
+.dsc-note b { color: var(--fig-ink); }
+.dsc-sw { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 2px; margin-right: 0.3rem; vertical-align: -0.02em; }
+
+/* narrow: the name and total on one line, the bar under them */
+.dsc-chart.is-narrow { --lab: 0px; }
+.dsc-chart.is-narrow .dsc-btn, .dsc-chart.is-narrow .dsc-sub { grid-template-columns: minmax(0, 1fr) auto; row-gap: 0.25rem; }
+.dsc-chart.is-narrow .dsc-btn .dsc-name { text-align: left; }
+.dsc-chart.is-narrow .dsc-btn .dsc-name::before { float: none; margin-right: 0.4rem; }
+.dsc-chart.is-narrow .dsc-name { grid-column: 1; grid-row: 1; }
+.dsc-chart.is-narrow .dsc-val { grid-column: 2; grid-row: 1; justify-self: end; }
+.dsc-chart.is-narrow .dsc-track { grid-column: 1 / -1; grid-row: 2; }
+.dsc-chart.is-narrow .dsc-axis { grid-template-columns: minmax(0, 1fr); }
+.dsc-chart.is-narrow .dsc-axis-pad { display: none; }
+.dsc-chart.is-narrow .dsc-axis-lab { justify-self: end; }
+.dsc-chart.is-narrow .dsc-ticks span:last-child { transform: translateX(-100%); }
+.dsc-chart.is-narrow .dsc-detail { padding: 0.75rem 0.5rem 0.9rem; }
+.dsc-chart.is-narrow .dsc-detail-in { grid-template-columns: minmax(0, 1fr); }
+.dsc-chart.is-narrow > .dsc-row > .dsc-btn .dsc-track { background-image: none; box-shadow: none; margin: 0; min-height: 1.1rem; }
+.dsc-chart.is-narrow .dsc-k .dsc-src { display: table; margin: 0.3rem 0 0; }
+.dsc-chart.is-narrow .dsc-sub { --lab: 0px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dsc-chart.is-pre > .dsc-row > .dsc-btn .dsc-bar { transform: none; }
+  .dsc-chart.is-grow > .dsc-row > .dsc-btn .dsc-bar { transition: none; }
+}
+
+/* the method's paragraphs, apart */
+[data-fig="disciplines"] .fig-method-body p { margin: 0 0 0.6rem; }

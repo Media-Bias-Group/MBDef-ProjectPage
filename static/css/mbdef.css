@@ -1,0 +1,215 @@
+/* Additions for the MBDef page on top of the group template's index.css (which stays as in the template):
+   the rotating map in the template's teaser slot, the numbers, the five steps, and the printed figures that open
+   into their interactive versions (static/css/figs.css styles those). */
+
+:root {
+  --font-display: 'Newsreader', 'Iowan Old Style', Georgia, serif; /* the MBDef Explorer's display face */
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  /* the stage: the Explorer's dark ground, for the map and the interactive figures */
+  --stage-bg: #0c1016;
+  --stage-glow: #1a2433;
+  --stage-ink: #e8ebee;
+  --stage-muted: #9aa4b2;
+}
+
+html, body { overflow-x: hidden; }
+[hidden] { display: none !important; } /* Bulma's reset gives <article> display: block, which would beat the attribute */
+
+/* ---------------------------------------------------------------- the hero: the map, then the title */
+.mbdef-hero { position: relative; padding: 8.5rem 1.5rem 3rem; }
+.hero-inner { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 2.25rem; }
+.map-stage { position: relative; }
+
+.map3d {
+  position: relative;
+  display: block;
+  height: min(62vh, 580px);
+  min-height: 320px;
+  overflow: hidden;
+  border-radius: var(--border-radius-lg);
+  background: radial-gradient(ellipse 65% 70% at 50% 48%, var(--stage-glow) 0%, #121a24 45%, var(--stage-bg) 100%);
+  border: 1px solid #1f2733;
+  box-shadow: var(--shadow-xl);
+  color: var(--stage-ink);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  outline-offset: 4px;
+}
+.map3d canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  cursor: grab;
+  touch-action: pan-y; /* a vertical swipe still scrolls the page on phones; a sideways one turns the map */
+  opacity: 0; transition: opacity 0.8s ease;
+}
+.map3d.is-ready canvas { opacity: 1; }
+.map3d.is-dragging canvas { cursor: grabbing; }
+.map3d-labels { position: absolute; inset: 0; pointer-events: none; }
+.map3d-label {
+  position: absolute; left: 0; top: 0;
+  margin: -0.75em 0 0 -0.2em;
+  padding: 0.12em 0.55em 0.14em 0.5em;
+  font-size: 0.8rem; font-weight: 600; line-height: 1.3; white-space: nowrap;
+  color: var(--stage-ink);
+  background: rgba(16, 22, 30, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-left: 3px solid var(--dot);
+  border-radius: 5px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  will-change: transform, opacity;
+}
+.map3d-note {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: 2rem; text-align: center; color: var(--stage-ink);
+}
+.map3d-note[hidden] { display: none; }
+.map3d-open { /* appears while the pointer is over the map: a click opens the Explorer */
+  position: absolute; right: 1rem; top: 1rem; z-index: 300;
+  padding: 0.35rem 0.8rem; border-radius: 999px;
+  font-size: 0.82rem; font-weight: 600; color: #fff;
+  background: rgba(82, 69, 234, 0.92);
+  opacity: 0; transform: translateY(-4px); transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+}
+.map3d:hover .map3d-open, .map3d:focus-visible .map3d-open { opacity: 1; transform: none; }
+.map3d.is-dragging .map3d-open { opacity: 0; }
+
+.map-cap { display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; margin-top: 0.9rem; }
+.map-legend { margin: 0; font-size: 0.92rem; line-height: 1.5; color: var(--secondary-color); max-width: 760px; }
+.map-eyebrow {
+  display: block; margin-bottom: 0.15rem;
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--primary-color);
+}
+.map-cap .explorer-btn { flex: none; }
+
+.title-block { text-align: center; max-width: 980px; margin: 0 auto; }
+.title-block .publication-title { margin-bottom: 1.25rem !important; }
+.publication-authors sup { font-size: 0.65em; }
+.publication-authors.affiliations { color: var(--text-secondary); font-weight: 400; margin-bottom: 0.5rem; }
+.publication-authors.affiliations .author-block { margin-right: 0.9rem; }
+.publication-authors.affiliations .eql-cntrb { display: block; margin-top: 0.25rem; }
+.publication-status { font-size: 0.95rem; color: var(--secondary-color); margin-bottom: 1rem; }
+.publication-status:empty { display: none; }
+
+/* buttons: the Explorer button takes the template's accent gradient; a planned link is dashed, not a link */
+.button.explorer-btn {
+  background: var(--gradient-accent) !important;
+  color: #fff !important; border: none !important;
+  box-shadow: var(--shadow-md);
+}
+.button.explorer-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); filter: brightness(1.08); }
+.button.is-soon {
+  background: transparent !important; color: var(--secondary-color) !important;
+  border: 2px dashed var(--border-color) !important; cursor: default; box-shadow: none;
+}
+.button.is-soon:hover { transform: none; }
+
+/* ---------------------------------------------------------------- numbers */
+.stat-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 0 0 1.75rem; }
+.stat {
+  background: var(--background-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 1rem 0.75rem; text-align: center; box-shadow: var(--shadow-sm);
+}
+.stat b { display: block; font-size: 1.7rem; font-weight: 800; color: var(--text-primary); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 0.9rem; color: var(--secondary-color); }
+.highlights li { margin-bottom: 0.4rem; }
+
+/* ---------------------------------------------------------------- how MBDef was built */
+.section-lead { max-width: 720px; margin: -1rem auto 2rem; text-align: center; color: var(--text-secondary); }
+.paper-figure { margin: 0 auto 2rem; }
+.paper-figure img { display: block; width: 100%; height: auto; }
+.paper-figure figcaption { margin-top: 0.5rem; text-align: center; font-size: 0.9rem; color: var(--secondary-color); }
+.pipeline {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1.6rem;
+}
+.pipeline li {
+  position: relative; display: flex; flex-direction: column;
+  background: var(--background-primary); border: 1px solid var(--border-color);
+  border-radius: var(--border-radius); padding: 1rem 0.9rem 1.1rem; box-shadow: var(--shadow-sm);
+}
+.pipeline li + li::before {
+  content: '\2192'; position: absolute; left: -1.3rem; top: 50%; transform: translateY(-50%);
+  font-size: 1.1rem; color: var(--secondary-color);
+}
+.pipeline .num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.8rem; height: 1.8rem; border-radius: 50%;
+  background: var(--gradient-accent); color: #fff; font-weight: 700; font-size: 0.9rem; margin-bottom: 0.5rem;
+}
+.pipeline h3 { font-size: 1.02rem; font-weight: 700; margin: 0 0 0.35rem; color: var(--text-primary); }
+.pipeline p { font-size: 0.9rem; line-height: 1.5; color: var(--text-secondary); margin: 0 0 0.7rem; flex: 1; }
+.pipeline .chip {
+  align-self: flex-start; font-size: 0.8rem; font-weight: 600;
+  color: var(--primary-hover); background: var(--background-accent);
+  border-radius: 999px; padding: 0.15rem 0.6rem;
+}
+
+/* ---------------------------------------------------------------- printed figures that open into interactive ones */
+.fig-open-row { margin: 1rem 0 0; text-align: center; font-size: 1rem; }
+.button.fig-open {
+  font-size: 0.9rem !important;
+  color: var(--primary-color) !important; background: var(--background-primary) !important;
+  border: 2px solid var(--primary-color) !important; box-shadow: none;
+}
+.button.fig-open:hover { color: #fff !important; background: var(--primary-color) !important; transform: translateY(-1px); }
+.button.fig-open[aria-expanded="true"] { color: #fff !important; background: var(--primary-color) !important; }
+.fig-live { margin: 1.5rem auto 0; scroll-margin-top: 8.5rem; } /* opened from a link: clear the fixed logo and buttons */
+.fig-live-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  margin: 0 0.25rem 0.5rem;
+}
+.fig-live-k { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary-color); }
+.fig-close {
+  appearance: none; cursor: pointer; font: inherit; font-size: 0.85rem; font-weight: 600;
+  color: var(--text-secondary); background: transparent; border: 1px solid var(--border-color);
+  border-radius: 999px; padding: 0.25rem 0.8rem;
+  white-space: nowrap; flex: none;
+}
+.fig-close:hover { color: var(--text-primary); border-color: var(--primary-color); }
+.fig-live .fig-panel { margin: 0; }
+
+/* the carousel: the figures differ in height, so keep the slides even; the template's dots vanish on white */
+.results-carousel .item img { background: #fff; max-height: 430px; object-fit: contain; }
+.slider-pagination .slider-page { background: var(--border-color); box-shadow: none; }
+.slider-pagination .slider-page.is-active { background: var(--primary-color); }
+
+/* ---------------------------------------------------------------- the explorer section */
+.explorer-figure { margin: 0 0 1.5rem; }
+.explorer-figure img {
+  display: block; width: 100%; height: auto;
+  border-radius: var(--border-radius-lg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-color);
+}
+.explorer-figure figcaption { margin-top: 0.75rem; font-size: 0.95rem; color: var(--secondary-color); text-align: center; }
+.bibtex-note { color: var(--secondary-color); font-size: 0.95rem; }
+
+/* ---------------------------------------------------------------- small screens */
+@media screen and (max-width: 1023px) {
+  .pipeline { grid-template-columns: 1fr; gap: 1.4rem; max-width: 520px; margin: 0 auto; }
+  .pipeline li + li::before { content: '\2193'; left: 50%; top: -1.35rem; transform: translateX(-50%); }
+}
+
+@media screen and (max-width: 768px) {
+  .mbdef-hero { padding: 7.25rem 1rem 2rem; }
+  .map3d { height: 52vh; max-height: 380px; min-height: 280px; }
+  .map3d-label { font-size: 0.72rem; }
+  .map-cap { flex-direction: column; align-items: stretch; }
+  .map-cap .explorer-btn { width: 100%; }
+  .map-drag { display: none; }
+  .stat-row { gap: 0.5rem; }
+  .stat { padding: 0.8rem 0.3rem; }
+  .button.fig-open { width: auto !important; }
+}
+
+@media screen and (max-width: 480px) {
+  .stat b { font-size: 1.3rem; }
+  .publication-title { font-size: 1.85rem !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map3d canvas, .map3d-open { transition: none; }
+  .hero, .section { animation: none; }
+}

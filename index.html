@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MBDef: A Media Bias Definitions Dataset</title>
+
+  <!-- Google tag (gtag.js), as on the group's other project pages -->
+  <meta name="ga-project-slug" content="MBDef-ProjectPage">
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-9FQN107WVK"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    const host = window.location.hostname;
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const projectSlug = document.querySelector('meta[name="ga-project-slug"]')?.content || pathParts[0] || host;
+    gtag('config', 'G-9FQN107WVK', {page_location: window.location.href, page_title: document.title, project_slug: projectSlug});
+  </script>
+
+  <!-- Edit project metadata here. The small script below fills repeated fields (the group template's PROJECT object). -->
+  <script>
+    const PROJECT = {
+      title: "MBDef: A Media Bias Definitions Dataset",
+      siteName: "Media Bias Group",
+      siteUrl: "https://media-bias-group.github.io/MBDef-ProjectPage/",
+      explorerUrl: "https://media-bias-group.github.io/MBDef/#overview",
+      // TODO when the paper is out: status, venue, pdfUrl and the paper's BibTeX entry
+      status: "",
+      venue: "",
+      year: "2026",
+      datePublished: "2026-10-29",
+      previewImage: "static/images/social_preview.png",
+      pdfUrl: "",
+      bibtex: `@misc{habereder2026mbdef,
+  title={MBDef: A Media Bias Definitions Dataset},
+  author={Isabella Habereder and Filip Ku\\v{c}era and Christoph Mandl and Eleni Ilkou and Timo Spinde},
+  year={2026},
+  url={https://media-bias-group.github.io/MBDef-ProjectPage/}
+}
+
+@dataset{habereder_2026_23773908,
+  title={MBDef: A Media Bias Definitions Dataset},
+  author={Habereder, Isabella and Ku\\v{c}era, Filip and Mandl, Christoph and Ilkou, Eleni and Spinde, Timo},
+  year={2026},
+  version={1.0.0},
+  publisher={Zenodo},
+  doi={10.5281/zenodo.23773908},
+  url={https://doi.org/10.5281/zenodo.23773908}
+}
+
+@dataset{habereder_2026_23773944,
+  title={MBDef-Gold: A Human-Validated Ground Truth for Media Bias Definition Extraction},
+  author={Habereder, Isabella and Ku\\v{c}era, Filip and Mandl, Christoph and Ilkou, Eleni and Spinde, Timo},
+  year={2026},
+  version={1.0.0},
+  publisher={Zenodo},
+  doi={10.5281/zenodo.23773944},
+  url={https://doi.org/10.5281/zenodo.23773944}
+}`,
+      themeColor: "#5245ea",
+      keywords: ["media bias", "dataset", "definition extraction", "scientific information extraction", "large language models", "taxonomy"],
+      tags: ["Media bias", "Dataset", "Definitions"],
+      description: "MBDef holds 103,476 definitions of 34,916 media-bias terms from 6,115 scientific papers, with synonyms, sub- and supertypes, examples and structured citations, plus MBDef-Gold, a human-validated benchmark for definition extraction.",
+      // the paper's abstract, as printed
+      abstract: [
+        "Although media bias is studied across disciplines, there is little agreement on how to define and categorise it.",
+        "Differing terminology and operationalisation make findings hard to compare and reproduce.",
+        "Existing collections of media bias definitions are small (at most 268 definitions from 73 papers) and contain only definitions, without synonyms, sub- and supertypes, or the citations between definitions.",
+        "To address these gaps, we present MBDef, a dataset comprising 103,476 definitions of media bias and related concepts, including synonyms, descriptions, related terms, subtypes, supertypes, examples, and structured citations.",
+        "We extract them from 6,115 scientific papers, collected through a Scopus keyword search and filtered by LLM-based relevance classification.",
+        "We propose an LLM-based pipeline for building MBDef.",
+        "To train and evaluate the pipeline, we release MBDef-Gold, a human-validated ground truth comprising 1,003 concepts and 1,192 definitions from 130 papers.",
+        "On the MBDef-Gold test split, the pipeline recovers 80.5% of the annotated definitions, and in a manual audit, 79.5% of sampled MBDef definitions are judged relevant.",
+        "MBDef covers the bias types shared by two existing media-bias classification schemes.",
+        "Competing definitions of a concept differ widely in meaning.",
+        "With synonyms and sub- and supertype relations, MBDef supports definition retrieval, query expansion, and label-definition studies in bias detection.",
+        "We make our data, code and prompts publicly available at https://github.com/Media-Bias-Group/MBDef."
+      ],
+      highlights: [
+        "MBDef collects <b>103,476 definitions</b> of <b>34,916 terms</b> from <b>6,115 scientific papers</b> on media bias. Earlier collections hold at most 268 definitions from 73 papers.",
+        "Each record keeps what a paper says about a term besides its definition: synonyms, descriptions, related terms, subtypes, supertypes, examples, and the works the definition cites.",
+        "<b>MBDef-Gold</b> is a human-validated benchmark for definition extraction: 1,192 definitions from 130 papers, each checked by two annotators, and by a third where they disagreed.",
+        "The extraction pipeline finds 80.5% of the definitions annotated in MBDef-Gold's 29 test papers (294 of 365). Its setup was chosen on those test papers, so that figure is optimistic; on 21 other annotated papers it finds 82.6%, and on 79 training papers its prompts did not use, 76.9%.",
+        "Following the papers' citations one level deep adds 2,610 papers that the keyword search missed; 2,400 of them still hold definitions after the final relevance filter, so they make up 2,400 of the 6,115 papers.",
+        "Definitions of one term differ widely: in MBDef-Gold, two papers' definitions of <i>media bias</i> (9 papers) have a median similarity of 0.25 on a scale from 0 to 1."
+      ],
+      affiliations: [
+        "Media Bias Group",
+        "Georg-August-University Göttingen, Germany",
+        "Julius-Maximilians-University Würzburg, Germany",
+        "University Passau, Germany",
+        "TIB – Leibniz Information Centre for Science and Technology, Hanover, Germany",
+        "National Institute of Informatics, Tokyo, Japan"
+      ],
+      authors: [
+        {name: "Isabella Habereder", url: "https://media-bias-research.org/team/isabella-habereder/", affiliation: [1, 2], equalContribution: true},
+        {name: "Filip Kučera", url: "https://shinobiultra.github.io/", affiliation: [1, 3], equalContribution: true},
+        {name: "Christoph Mandl", url: "https://media-bias-research.org/team/christoph-mandl/", affiliation: [1, 4]},
+        {name: "Eleni Ilkou", url: "https://orcid.org/0000-0002-4847-6177", affiliation: [5]},
+        {name: "Timo Spinde", url: "https://timospinde.com/", affiliation: [1, 6]}
+      ]
+    };
+
+    const projectText = (value) => Array.isArray(value) ? value.join(" ") : value;
+    const projectAuthors = () => PROJECT.authors.map(author => author.name).join(", ");
+    const projectUrl = (path) => path.startsWith("http") ? path : new URL(path, PROJECT.siteUrl).href;
+    const projectEscape = (value) => String(value).replace(/[&<>"']/g, character => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[character]));
+    const projectBibTeX = () => PROJECT.bibtex;
+    const projectMeta = (type, name, content) => `<meta ${type}="${projectEscape(name)}" content="${projectEscape(content)}">`;
+
+    function writeProjectHead() {
+      const description = projectText(PROJECT.description);
+      const image = projectUrl(PROJECT.previewImage);
+      const imageAlt = `${PROJECT.title} - Research Preview`;
+      const articleData = {
+        "@context": "https://schema.org", "@type": "ScholarlyArticle",
+        "headline": PROJECT.title, "description": description,
+        "author": PROJECT.authors.map(author => ({"@type": "Person", "name": author.name})),
+        "datePublished": PROJECT.datePublished,
+        "url": PROJECT.siteUrl, "image": image, "keywords": PROJECT.keywords,
+        "abstract": projectText(PROJECT.abstract), "isAccessibleForFree": true,
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "sameAs": ["https://doi.org/10.5281/zenodo.23773908", "https://doi.org/10.5281/zenodo.23773944",
+                   "https://huggingface.co/datasets/mediabiasgroup/MBDef", "https://github.com/Media-Bias-Group/MBDef"],
+        "mainEntity": {"@type": "WebPage", "@id": PROJECT.siteUrl}
+      };
+      const tags = [
+        projectMeta("name", "title", PROJECT.title),
+        projectMeta("name", "description", description),
+        projectMeta("name", "keywords", PROJECT.keywords.join(", ")),
+        projectMeta("name", "author", projectAuthors()),
+        projectMeta("name", "robots", "index, follow"),
+        projectMeta("property", "og:type", "article"),
+        projectMeta("property", "og:site_name", PROJECT.siteName),
+        projectMeta("property", "og:title", PROJECT.title),
+        projectMeta("property", "og:description", description),
+        projectMeta("property", "og:url", PROJECT.siteUrl),
+        projectMeta("property", "og:image", image),
+        projectMeta("property", "og:image:width", "1200"),
+        projectMeta("property", "og:image:height", "630"),
+        projectMeta("property", "og:image:alt", imageAlt),
+        ...PROJECT.tags.map(tag => projectMeta("property", "article:tag", tag)),
+        projectMeta("name", "twitter:card", "summary_large_image"),
+        projectMeta("name", "twitter:title", PROJECT.title),
+        projectMeta("name", "twitter:description", description),
+        projectMeta("name", "twitter:image", image),
+        projectMeta("name", "twitter:image:alt", imageAlt),
+        projectMeta("name", "citation_title", PROJECT.title),
+        ...PROJECT.authors.map(author => projectMeta("name", "citation_author", author.name)),
+        projectMeta("name", "citation_publication_date", PROJECT.year),
+        projectMeta("name", "theme-color", PROJECT.themeColor),
+        `<script type="application/ld+json">${JSON.stringify(articleData)}</scr` + `ipt>`
+      ];
+      document.write(tags.join("\n"));
+    }
+
+    function renderProjectMetadata() {
+      document.querySelectorAll("[data-project-title]").forEach(element => { element.textContent = PROJECT.title; });
+      document.querySelectorAll("[data-project-status]").forEach(element => {
+        element.textContent = [PROJECT.status, PROJECT.year].filter(Boolean).join(" · ");
+      });
+      document.querySelectorAll("[data-project-abstract]").forEach(element => { element.textContent = projectText(PROJECT.abstract); });
+      document.querySelectorAll("[data-project-bibtex]").forEach(element => { element.textContent = projectBibTeX(); });
+      document.querySelectorAll("[data-explorer-link]").forEach(element => {
+        element.href = PROJECT.explorerUrl; element.target = "_blank"; element.rel = "noopener noreferrer";
+      });
+
+      const authors = document.querySelector("[data-project-authors]");
+      if (authors) {
+        authors.innerHTML = PROJECT.authors.map((author, index) => {
+          const comma = index < PROJECT.authors.length - 1 ? "," : "";
+          const sup = [...(author.affiliation || []), ...(author.equalContribution ? ["*"] : [])].join(",");
+          const name = projectEscape(author.name);
+          const linkedName = author.url ? `<a href="${projectEscape(author.url)}" target="_blank" rel="noopener noreferrer">${name}</a>` : name;
+          return `<span class="author-block">${linkedName}<sup>${sup}</sup>${comma}</span>`;
+        }).join("\n");
+      }
+      const affiliations = document.querySelector("[data-project-affiliations]");
+      if (affiliations) {
+        affiliations.innerHTML = PROJECT.affiliations.map((a, i) => `<span class="author-block"><sup>${i + 1}</sup>${projectEscape(a)}</span>`).join("\n")
+          + (PROJECT.authors.some(a => a.equalContribution) ? `<span class="eql-cntrb"><small><sup>*</sup>Equal contribution</small></span>` : "");
+      }
+      const highlights = document.querySelector("[data-project-highlights]");
+      // the highlights are this file's own text, with <b> and <i> for emphasis
+      if (highlights) highlights.innerHTML = PROJECT.highlights.map(item => `<li>${item}</li>`).join("\n");
+    }
+
+    writeProjectHead();
+    document.addEventListener("DOMContentLoaded", renderProjectMetadata);
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
+  <link rel="apple-touch-icon" href="static/images/favicon.ico">
+
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="static/css/mbdef.css">
+  <link rel="stylesheet" href="static/css/figs.css">
+  <link rel="stylesheet" href="static/css/figs/pipeline.css">
+  <link rel="stylesheet" href="static/css/figs/disciplines.css">
+  <link rel="stylesheet" href="static/css/figs/content.css">
+  <link rel="stylesheet" href="static/css/figs/coverage.css">
+  <link rel="stylesheet" href="static/css/figs/divergence.css">
+  <link rel="stylesheet" href="static/css/figs/network.css">
+
+  <!-- Inter as in the template; Newsreader and JetBrains Mono as in the MBDef Explorer -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+  <script defer src="static/js/bulma-carousel.min.js"></script>
+  <script defer src="static/js/index.js"></script>
+  <script defer src="static/js/map3d.js"></script>
+  <script defer src="static/js/figkit.js"></script>
+  <!-- one script per interactive figure; each registers itself with FIG.register -->
+  <script defer src="static/js/figs/pipeline.js"></script>
+  <script defer src="static/js/figs/disciplines.js"></script>
+  <script defer src="static/js/figs/content.js"></script>
+  <script defer src="static/js/figs/coverage.js"></script>
+  <script defer src="static/js/figs/divergence.js"></script>
+  <script defer src="static/js/figs/network.js"></script>
+</head>
+<body>
+  <!-- Top-left logo button -->
+  <a href="https://media-bias-research.org/research/" class="mbg-logo-btn" title="Back to Media Bias Research">
+    <img src="static/images/MediaBiasGroup_Logo_typobold-scaled-scaled.webp" alt="Media Bias Group Logo" class="mbg-logo-img">
+  </a>
+
+  <!-- Scroll to Top Button -->
+  <button class="scroll-to-top" onclick="scrollToTop()" title="Scroll to top" aria-label="Scroll to top">
+    <i class="fas fa-chevron-up"></i>
+  </button>
+
+  <!-- More Works Dropdown -->
+  <div class="more-works-container">
+    <button class="more-works-btn" onclick="toggleMoreWorks()" title="View More Works from Our Lab">
+      <i class="fas fa-flask"></i>
+      More Works
+      <i class="fas fa-chevron-down dropdown-arrow"></i>
+    </button>
+    <div class="more-works-dropdown" id="moreWorksDropdown">
+      <div class="dropdown-header">
+        <h4>More Related Work from Our Lab</h4>
+        <button class="close-btn" onclick="toggleMoreWorks()" aria-label="Close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="works-list">
+        <a href="https://media-bias-group.github.io/SciDef-ProjectPage/" class="work-item" target="_blank" rel="noopener noreferrer">
+          <div class="work-info">
+            <h5>SciDef: Datasets and Tools for Automated Definition Extraction from Scientific Literature with LLMs</h5>
+            <p>The extraction method and the DefExtra ground truth that MBDef and MBDef-Gold build on.</p>
+            <span class="work-venue">KEIR @ CIKM 2026</span>
+          </div>
+          <i class="fas fa-external-link-alt"></i>
+        </a>
+        <a href="https://media-bias-group.github.io/LLMExplanations_ProjectPage/" class="work-item" target="_blank" rel="noopener noreferrer">
+          <div class="work-info">
+            <h5>Plausibility Machines: How LLM-Generated Explanations Shape Media Bias Perception</h5>
+            <p>A randomized trial of how explanations written by LLMs and by experts change readers' perception of bias.</p>
+            <span class="work-venue">Under review, 2026</span>
+          </div>
+          <i class="fas fa-external-link-alt"></i>
+        </a>
+        <a href="https://media-bias-research.org/media-bias-101-a-very-short-introduction-to-the-taxonomy/" class="work-item" target="_blank" rel="noopener noreferrer">
+          <div class="work-info">
+            <h5>Media Bias 101: A Very Short Introduction to the Taxonomy</h5>
+            <p>The Media Bias Taxonomy names the subtypes of media bias and standardises the terms used to describe them.</p>
+            <span class="work-venue">Research Project Summary</span>
+          </div>
+          <i class="fas fa-external-link-alt"></i>
+        </a>
+      </div>
+    </div>
+    <button class="more-works-btn" onclick="window.location.href='https://media-bias-research.org/research/'" title="Back to the Media Bias Group website">
+      <i class="fas fa-arrow-left"></i>
+      <span>Back to Website</span>
+    </button>
+  </div>
+
+  <main id="main-content">
+    <!-- The hero: the rotating 3D map of the dataset (static/js/map3d.js, data from scripts/build_points.py),
+         then the title, authors and links. A click on the map opens the MBDef Explorer. -->
+    <section class="mbdef-hero" id="top">
+      <div class="hero-inner">
+        <div class="map-stage">
+          <a class="map3d" id="map3d" data-explorer-link href="#" draggable="false" data-ground="dark" data-src="static/data/points"
+             aria-label="A slowly turning 3D map with one dot for each of the 34,916 terms in MBDef, placed by the meaning of their definitions and coloured by topic. Opens the MBDef Explorer.">
+            <canvas></canvas>
+            <span class="map3d-labels" aria-hidden="true"></span>
+            <span class="map3d-note" hidden></span>
+            <span class="map3d-open" aria-hidden="true">Open the MBDef Explorer <i class="fas fa-arrow-right"></i></span>
+          </a>
+          <div class="map-cap">
+            <p class="map-legend">
+              <span class="map-eyebrow">34,916 terms · 36 topics</span>
+              <span class="map-explain">Each dot is one term from MBDef, placed by the meaning of its definitions: terms with similar definitions sit close together. Colours are 36 topics, one reasonable grouping found by clustering; the labels name ten of them by their most common term. <span class="map-drag">Drag to turn; click to open the Explorer.</span></span>
+            </p>
+            <a class="button is-rounded explorer-btn" data-explorer-link href="#">
+              <span class="icon"><i class="fas fa-compass"></i></span>
+              <span>Open the MBDef Explorer</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="title-block">
+          <h1 class="title is-1 publication-title" data-project-title>MBDef: A Media Bias Definitions Dataset</h1>
+          <div class="is-size-5 publication-authors" data-project-authors></div>
+          <div class="is-size-6 publication-authors affiliations" data-project-affiliations></div>
+          <div class="publication-status" data-project-status></div>
+          <div class="publication-links">
+            <span class="link-block">
+              <span class="button is-normal is-rounded is-soon" title="The paper will be linked here once it is public">
+                <span class="icon"><i class="fas fa-file-pdf"></i></span>
+                <span>Paper · coming soon</span>
+              </span>
+            </span>
+            <span class="link-block">
+              <a href="https://github.com/Media-Bias-Group/MBDef" target="_blank" rel="noopener noreferrer" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fab fa-github"></i></span>
+                <span>Code</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a href="https://huggingface.co/datasets/mediabiasgroup/MBDef" target="_blank" rel="noopener noreferrer" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fas fa-database"></i></span>
+                <span>MBDef</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a href="https://huggingface.co/datasets/mediabiasgroup/MBDef-Gold" target="_blank" rel="noopener noreferrer" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fas fa-database"></i></span>
+                <span>MBDef-Gold</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a href="https://doi.org/10.5281/zenodo.23773908" target="_blank" rel="noopener noreferrer" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fas fa-link"></i></span>
+                <span>MBDef DOI</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a href="https://doi.org/10.5281/zenodo.23773944" target="_blank" rel="noopener noreferrer" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fas fa-link"></i></span>
+                <span>MBDef-Gold DOI</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a href="https://github.com/Media-Bias-Group/MBDef/tree/main/tutorials" target="_blank" rel="noopener noreferrer" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fas fa-book"></i></span>
+                <span>Tutorials</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a data-explorer-link href="#" class="external-link button is-normal is-rounded explorer-btn">
+                <span class="icon"><i class="fas fa-compass"></i></span>
+                <span>Explorer</span>
+              </a>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Highlights -->
+    <section class="section hero is-light" id="highlights">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-four-fifths">
+            <h2 class="title is-3">Highlights</h2>
+            <div class="stat-row body-stats" aria-label="MBDef in numbers">
+              <div class="stat"><b>34,916</b><span>terms</span></div>
+              <div class="stat"><b>103,476</b><span>definitions</span></div>
+              <div class="stat"><b>6,115</b><span>papers</span></div>
+            </div>
+            <div class="content has-text-justified">
+              <ul class="highlights" data-project-highlights></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How MBDef was built: the paper's Fig. 1 with the five steps, or its interactive version -->
+    <section class="section" id="pipeline">
+      <div class="container is-max-widescreen">
+        <h2 class="title is-3 has-text-centered">How MBDef was built</h2>
+        <p class="section-lead">Five steps turn a keyword search into a dataset of definitions. Each step keeps what the next one needs and says what it leaves out.</p>
+        <figure class="paper-figure wide">
+            <img src="static/images/paper/fig1.png" width="1476" height="205" loading="lazy"
+                 alt="The paper's Figure 1: the five-step pipeline: search, classification, extraction, closure and post-processing.">
+            <figcaption>Paper, Fig. 1: the five-step pipeline.</figcaption>
+          </figure>
+          <ol class="pipeline">
+            <li>
+              <span class="num">1</span>
+              <h3>Search</h3>
+              <p>A Scopus keyword search returns 50,101 documents, 35,815 of them openly accessible; 14,862 of their PDFs could be retrieved and converted to text.</p>
+              <span class="chip">14,862 papers read</span>
+            </li>
+            <li>
+              <span class="num">2</span>
+              <h3>Classification</h3>
+              <p>Two language models judge each paper's title and abstract; a third settles their disagreements. Relevant papers become the seed corpus.</p>
+              <span class="chip">3,869 seed papers</span>
+            </li>
+            <li>
+              <span class="num">3</span>
+              <h3>Extraction</h3>
+              <p>An extractor writes down each term a paper defines, with its definitions and related fields. It is trained and scored on the hand-validated MBDef-Gold.</p>
+              <span class="chip">80.5% of test definitions found</span>
+            </li>
+            <li>
+              <span class="num">4</span>
+              <h3>Closure</h3>
+              <p>Works cited next to the extracted definitions are fetched, one level deep, and extracted the same way: papers the keyword search missed.</p>
+              <span class="chip">+2,610 cited papers</span>
+            </li>
+            <li>
+              <span class="num">5</span>
+              <h3>Post-processing</h3>
+              <p>Spellings of one term are merged, and three models together remove definitions of terms unrelated to media bias.</p>
+              <span class="chip">103,476 definitions kept</span>
+            </li>
+          </ol>
+        <p class="fig-open-row"><button type="button" class="button is-rounded fig-open" data-open-fig="pipeline" aria-expanded="false" aria-controls="fig-pipeline"><span class="icon"><i class="fas fa-hand-pointer"></i></span><span>Explore the pipeline interactively</span></button></p>
+          <div class="fig-live" id="live-pipeline" hidden>
+            <div class="fig-live-bar"><span class="fig-live-k">Interactive, drawn from the released data</span><button type="button" class="fig-close" data-close-fig>Close <span aria-hidden="true">&times;</span></button></div>
+            <article class="fig-panel" id="fig-pipeline" data-fig="pipeline" data-src="static/data/figs/pipeline.json" hidden></article>
+          </div>
+      </div>
+    </section>
+
+    <!-- The paper's figures as printed: the template's carousel -->
+    <section class="hero is-small" id="figures">
+      <div class="hero-body">
+        <div class="container is-max-desktop">
+          <h2 class="title is-3 has-text-centered">Figures</h2>
+          <p class="section-lead">The paper's figures as printed. In each, grey counts the seed papers that the keyword search found, and blue the papers added through their citations; numbers in brackets are those two parts.</p>
+          <div class="carousel results-carousel">
+            <div class="item">
+              <img src="static/images/paper/fig2.png" width="1476" height="755" loading="lazy" alt="The paper's Figure 2: research disciplines of the 6,115 papers.">
+              <h2 class="subtitle has-text-centered">Fig. 2. The research disciplines of the 6,115 papers, from OpenAlex, one field per paper. Most come from the social sciences (58.6%), where media bias is mainly studied; grey are seed papers, blue are papers added through their citations.</h2>
+              <p class="fig-open-row"><button type="button" class="button is-rounded fig-open" data-open-fig="disciplines" aria-expanded="false" aria-controls="fig-disciplines"><span class="icon"><i class="fas fa-hand-pointer"></i></span><span>Explore Fig. 2 interactively</span></button></p>
+            </div>
+            <div class="item">
+              <img src="static/images/paper/fig3.png" width="1476" height="439" loading="lazy" alt="The paper's Figure 3: counts of extracted records by field, and the ten terms with the most definitions.">
+              <h2 class="subtitle has-text-centered">Fig. 3. Left: how many items of each kind were extracted from the papers, definitions first (103,476). Right: the ten terms with the most definitions, led by <i>fake news</i> (1,891).</h2>
+              <p class="fig-open-row"><button type="button" class="button is-rounded fig-open" data-open-fig="content" aria-expanded="false" aria-controls="fig-content"><span class="icon"><i class="fas fa-hand-pointer"></i></span><span>Explore Fig. 3 interactively</span></button></p>
+            </div>
+            <div class="item">
+              <img src="static/images/paper/fig4.png" width="1476" height="538" loading="lazy" alt="The paper's Figure 4: how many MBDef papers define each of the eleven bias types that two published schemes share.">
+              <h2 class="subtitle has-text-centered">Fig. 4. All eleven bias types that two published classification schemes share are defined in MBDef. Reporting-level types such as gatekeeping (37 papers) are well covered; language-level types are rarely defined under these names.</h2>
+              <p class="fig-open-row"><button type="button" class="button is-rounded fig-open" data-open-fig="coverage" aria-expanded="false" aria-controls="fig-coverage"><span class="icon"><i class="fas fa-hand-pointer"></i></span><span>Explore Fig. 4 interactively</span></button></p>
+            </div>
+            <div class="item">
+              <img src="static/images/paper/fig5.png" width="972" height="384" loading="lazy" alt="The paper's Figure 5: similarity of definitions of the same term across papers, for ten terms.">
+              <h2 class="subtitle has-text-centered">Fig. 5. How similar two papers' definitions of the same term are (DefScore, 0 to 1), in MBDef-Gold. Most pairs score low: the median for <i>media bias</i> is 0.25.</h2>
+              <p class="fig-open-row"><button type="button" class="button is-rounded fig-open" data-open-fig="divergence" aria-expanded="false" aria-controls="fig-divergence"><span class="icon"><i class="fas fa-hand-pointer"></i></span><span>Explore Fig. 5 interactively</span></button></p>
+            </div>
+            <div class="item">
+              <img src="static/images/paper/fig6.png" width="1476" height="480" loading="lazy" alt="The paper's Figure 6: a network of narrower and broader terms around media bias, misinformation and propaganda.">
+              <h2 class="subtitle has-text-centered">Fig. 6. Narrower-to-broader links that papers report between terms around <i>media bias</i>, <i>fake news</i> and <i>propaganda</i>; numbers count the papers behind each link.</h2>
+              <p class="fig-open-row"><button type="button" class="button is-rounded fig-open" data-open-fig="network" aria-expanded="false" aria-controls="fig-network"><span class="icon"><i class="fas fa-hand-pointer"></i></span><span>Explore Fig. 6 interactively</span></button></p>
+            </div>
+          </div>
+        </div>
+        <div class="container is-max-widescreen">
+          <div class="fig-live" id="live-figures" hidden>
+            <div class="fig-live-bar"><span class="fig-live-k">Interactive, drawn from the released data</span><button type="button" class="fig-close" data-close-fig>Close <span aria-hidden="true">&times;</span></button></div>
+            <article class="fig-panel" id="fig-disciplines" data-fig="disciplines" data-src="static/data/figs/disciplines.json" hidden></article>
+            <article class="fig-panel" id="fig-content" data-fig="content" data-src="static/data/figs/content.json" hidden></article>
+            <article class="fig-panel" id="fig-coverage" data-fig="coverage" data-src="static/data/figs/coverage.json" hidden></article>
+            <article class="fig-panel" id="fig-divergence" data-fig="divergence" data-src="static/data/figs/divergence.json" hidden></article>
+            <article class="fig-panel" id="fig-network" data-fig="network" data-src="static/data/figs/network.json" hidden></article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Paper abstract -->
+    <section class="section hero is-light" id="abstract">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-four-fifths">
+            <h2 class="title is-3">Abstract</h2>
+            <div class="content has-text-justified">
+              <p data-project-abstract></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- The MBDef Explorer -->
+    <section class="section" id="explorer">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-four-fifths">
+            <h2 class="title is-3">The MBDef Explorer</h2>
+            <div class="content has-text-justified">
+              <p>The Explorer is a web page for browsing all of MBDef: search a term and read how each paper defines it,
+                see which spellings were merged into one term, follow the broader and narrower terms that papers name,
+                and explore the full map of the terms, flat or in 3D, with any topic named.</p>
+            </div>
+            <figure class="explorer-figure">
+              <a data-explorer-link href="#">
+                <img src="static/images/mbdef-explorer-poster.png" width="1600" height="1240" loading="lazy"
+                     alt="The MBDef Explorer: its 3D map and its main views">
+              </a>
+              <figcaption>A poster of the Explorer's views: its flat map (with other topics named than the map above), the merged spellings, the relevance models, the links between terms, and the papers.</figcaption>
+            </figure>
+            <a data-explorer-link href="#" class="button is-medium is-rounded explorer-btn">
+              <span class="icon"><i class="fas fa-compass"></i></span>
+              <span>Open the MBDef Explorer</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!--BibTex citation -->
+    <section class="section hero is-light" id="BibTeX">
+      <div class="container is-max-desktop content">
+        <div class="bibtex-header">
+          <h2 class="title">BibTeX</h2>
+          <button class="copy-bibtex-btn" onclick="copyBibTeX()" title="Copy BibTeX to clipboard">
+            <i class="fas fa-copy"></i>
+            <span class="copy-text">Copy</span>
+          </button>
+        </div>
+        <p class="bibtex-note">The paper, then the two datasets on Zenodo. The paper's entry will gain its venue once it is published.</p>
+        <pre id="bibtex-code"><code data-project-bibtex></code></pre>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-8">
+          <div class="content">
+            <p>
+              This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank" rel="noopener noreferrer">Academic Project Page Template</a>
+              which was adopted from the <a href="https://nerfies.github.io" target="_blank" rel="noopener noreferrer">Nerfies</a> project page.
+              You are free to borrow the source code of this website, we just ask that you link back to this page in the footer. <br>
+              This website is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
+              Commons Attribution-ShareAlike 4.0 International License</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
