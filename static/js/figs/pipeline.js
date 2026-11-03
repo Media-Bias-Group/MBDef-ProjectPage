@@ -7,16 +7,39 @@
    foot; at Step 4 a blue stream falls into the band. Wide screens run the flow left to right, phones top to bottom:
    the geometry is built in flow coordinates (u along the flow, v across it) and mapped to x/y by the mode.
 
-   On open the flow runs once: the band is drawn from its start, each stream falls as the front passes it, and the
-   step counts run with it (skipped for reduced motion). A click on a step (its header, its column or a stream) opens
-   its card under the flow; a second click or Esc closes it. Every number comes from static/data/figs/pipeline.json,
-   written by scripts/figs/pipeline.py from the paper and the released tables. */
+   On wide screens the columns start where the printed figure's five boxes start, so the print, flown onto the stage,
+   dissolves into the step headers in place. Then the flow runs (k.onArrive, about 1.2 s, skipped for reduced motion):
+   the band grows from its start, each stream falls as the front passes it, and the step counts run with it.
+
+   Hover (or keyboard focus) on a step's header, column or stream lights that column: its header, its part of the band
+   (the band is dimmed elsewhere through one sliding mask, so it keeps no seams) and its streams; the other columns
+   dim, and the tooltip gives the step's numbers. A stream under the pointer brightens down to its count. A click (a
+   tap on touch screens) opens the step's card under the flow and keeps its column lit; a second click or Esc closes
+   it. Every number comes from static/data/figs/pipeline.json, written by scripts/figs/pipeline.py from the paper and
+   the released tables. */
 (function () {
   'use strict';
 
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
-  function ease(x) { return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
-  function sine(x) { return (1 - Math.cos(Math.PI * x)) / 2; } // the front: gentler, so no step is rushed
+  function bezier(x1, y1, x2, y2) { // a CSS cubic-bezier as a function of time (0..1)
+    function c(t, p1, p2) { var u = 1 - t; return 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t; }
+    return function (x) {
+      if (x <= 0) return 0;
+      if (x >= 1) return 1;
+      var lo = 0, hi = 1, t = x;
+      for (var i = 0; i < 24; i++) { t = (lo + hi) / 2; if (c(t, x1, x2) < x) lo = t; else hi = t; }
+      return c(t, y1, y2);
+    };
+  }
+  function inverse(fn, y) { var lo = 0, hi = 1; for (var i = 0; i < 24; i++) { var m = (lo + hi) / 2; if (fn(m) < y) lo = m; else hi = m; } return (lo + hi) / 2; }
+  // the entrance, on one soft curve: a gentle start while the print dissolves, a long soft landing
+  var soft = bezier(0.3, 0, 0.3, 1);
+  var SWEEP = 1050, FALL = 420;    // ms: the front's run over the flow; one stream's fall
+  // where the printed figure's five boxes start, as a share of its width (measured on static/images/paper/fig1.png,
+  // 1,476 px wide: the boxes' left borders at 20, 332, 570, 926 and 1,207 px; Step 1's column starts at the edge)
+  var PRINT = [0, 332 / 1476, 570 / 1476, 926 / 1476, 1207 / 1476];
+  var DIM = 0.5;                   // how far the band dims outside the lit column (the mask's darkness)
+  function clock() { var t = document.timeline && document.timeline.currentTime; return t != null ? +t : performance.now(); }
 
   FIG.register('pipeline', {
     build: function (panel, D, k) {
@@ -36,11 +59,11 @@
         { name: 'Extraction', from: P.seed_papers, out: P.seed_papers, unit: 'papers extracted', sub: 'finds ' + P.test_recall + '% of test definitions',
           tip: '<b>Step 3 · Extraction</b><br>All ' + nf(P.seed_papers) + ' seed papers are read by the extractor; none is dropped here<br>' +
             'On hand-checked papers it finds ' + P.test_found + ' of ' + P.test_gold + ' test definitions (' + P.test_recall + '%)' },
-        { name: 'Closure', from: P.seed_papers, out: P.corpus_papers, unit: 'papers', sub: '<span class="pl-c">+' + nf(P.closure_added) + ' cited</span> · ' + nf(P.defs_collapsed) + ' definitions',
+        { name: 'Closure', from: P.seed_papers, out: P.corpus_papers, unit: 'papers', sub: '<span class="pl-c">+' + nf(P.closure_added) + '\u00a0cited</span> · ' + nf(P.defs_collapsed) + '\u00a0definitions',
           tip: '<b>Step 4 · Closure</b><br>' + nf(P.cited_works) + ' cited works → ' + nf(P.closure_added) + ' papers added<br>' +
             nf(P.seed_papers) + ' + ' + nf(P.closure_added) + ' = ' + nf(P.corpus_papers) + ' papers, with ' + nf(P.defs_extracted) + ' definitions extracted (' +
             nf(P.defs_collapsed) + ' after collapsing identical ones)' },
-        { name: 'Post Processing', from: P.corpus_papers, out: P.final_papers, unit: 'papers', sub: nf(P.final_definitions) + ' definitions · ' + nf(P.terms) + ' terms',
+        { name: 'Post Processing', from: P.corpus_papers, out: P.final_papers, unit: 'papers', sub: nf(P.final_definitions) + '\u00a0definitions · ' + nf(P.terms) + '\u00a0terms',
           tip: '<b>Step 5 · Post Processing</b><br>' + nf(P.corpus_papers) + ' papers → ' + nf(P.final_papers) + ' (' + nf(R.seed) + ' seed, ' + nf(R.cited) + ' cited)<br>' +
             nf(P.defs_collapsed) + ' definitions → ' + nf(P.final_definitions) + '; ' + nf(P.label_groups) + ' term groups → ' + nf(P.terms) + ' terms' }
       ];
@@ -50,9 +73,9 @@
           tip: '<b>' + nf(X.not_open) + '</b> search results (' + pc1(X.not_open, P.search_results) + ') have no openly accessible copy ' + K('(' + nf(P.search_results) + ' − ' + nf(P.open_access) + ')') },
         { step: 0, at: 0.78, n: X.open_not_read, cap: 'open, not read',
           tip: '<b>' + nf(X.open_not_read) + '</b> openly accessible documents (' + pc1(X.open_not_read, P.search_results) + ' of the search) could not be retrieved or converted to text ' + K('(' + nf(P.open_access) + ' − ' + nf(P.pdfs_read) + ')') },
-        { step: 1, at: 0.3, n: X.not_relevant, cap: 'not marked relevant',
+        { step: 1, at: 0.27, n: X.not_relevant, cap: 'not marked relevant',
           tip: '<b>' + nf(X.not_relevant) + '</b> papers read were not marked relevant to media bias ' + K('(' + nf(P.pdfs_read) + ' − ' + nf(P.both_relevant) + ' − ' + nf(P.judge_added) + ')') },
-        { step: 1, at: 0.8, n: X.removed, cap: 'errata, no title',
+        { step: 1, at: 0.76, n: X.removed, cap: 'errata, no title',
           tip: '<b>' + nf(X.removed) + '</b> removed: ' + P.removed_errata + ' errata, withdrawals or tables of contents, and ' + P.removed_no_title + ' records without a recoverable title' },
         { step: 3, at: 0.3, n: P.closure_added, cap: 'cited papers join', cited: true,
           tip: '<b>' + nf(P.cited_works) + '</b> distinct works are cited next to extracted definitions (from ' + nf(P.citation_markers) + ' citation markers, ' + P.markers_matched_pct + '% matched to a reference list).<br>' +
@@ -75,17 +98,31 @@
       chart.append(heads, svg); // the steps first in the reading and tab order; they sit over the flow
       body.append(chart, card);
 
-      var sel = -1, hov = -1, played = !k.motion, anim = 0, G = null, lastW = 0, front = 0, scaleTip = '';
+      // what is lit: the pointer's step and stream, else the keyboard's, else the open card's (-1: none)
+      var ptr = { s: -1, e: -1 }, kbd = { s: -1, e: -1 }, sel = -1, selEv = -1;
+      var ent = null, anim = 0, G = null, lastW = 0, scaleTip = '';
       var stepTip = function (i) { return STEPS[i].tip + '<br>' + K(scaleTip); };
+      // the pointer's hover (a mouse or a pen; a touch screen's tap opens the card instead, which lights the column)
+      function onPoint(target, s, j, html) {
+        target.addEventListener('pointerenter', function (e) { if (e.pointerType === 'touch') return; point(s, j); if (!ent) k.tip.show(e, html()); });
+        target.addEventListener('pointermove', function (e) {
+          if (e.pointerType === 'touch' || ent) return;
+          if (ptr.s !== s || ptr.e !== j) point(s, j);
+          k.tip.show(e, html());
+        });
+        target.addEventListener('pointerleave', function (e) { if (e.pointerType === 'touch') return; point(-1, -1); k.tip.hide(); });
+      }
+      // keyboard focus lights the same as hover (a click that focuses does not)
+      function onKey(target, s, j, html) {
+        target.addEventListener('focus', function (e) { if (!target.matches(':focus-visible')) return; kbd = { s: s, e: j }; paint(); k.tip.show(e, html()); });
+        target.addEventListener('blur', function () { if (kbd.s === s && kbd.e === j) { kbd = { s: -1, e: -1 }; paint(); } k.tip.hide(); });
+      }
       var hb = STEPS.map(function (st, i) {
         var num = el('b', { class: 'pl-num', text: nf(st.out) });
         var b = el('button', {
           type: 'button', class: 'pl-step', 'aria-expanded': 'false', 'aria-controls': 'pl-card',
           'aria-label': 'Step ' + (i + 1) + ', ' + st.name + ': ' + nf(st.out) + ' ' + st.unit + ', ' + st.sub.replace(/<[^>]+>/g, ''),
-          onclick: function () { select(i); },
-          onmouseenter: function (e) { hover(i); k.tip.show(e, stepTip(i)); }, onmousemove: function (e) { k.tip.show(e, stepTip(i)); },
-          onmouseleave: function () { hover(-1); k.tip.hide(); },
-          onfocus: function (e) { hover(i); if (b.matches(':focus-visible')) k.tip.show(e, stepTip(i)); }, onblur: function () { hover(-1); k.tip.hide(); },
+          onclick: function () { select(i, -1); },
           onkeydown: function (e) {
             var d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
             if (d) { e.preventDefault(); hb[(i + d + 5) % 5].focus(); }
@@ -97,6 +134,8 @@
           el('span', { class: 'pl-unit', text: st.unit }),
           el('span', { class: 'pl-sub', html: st.sub }));
         b._num = num;
+        onPoint(b, i, -1, function () { return stepTip(i); });
+        onKey(b, i, -1, function () { return stepTip(i); });
         heads.appendChild(b);
         return b;
       });
@@ -132,15 +171,13 @@
         svg.textContent = '';
         var defs = S('defs', {}, svg), tint = S('g', { class: 'pl-tint' }, svg), flow = S('g', {}, svg);
         var clipRect = S('rect', { x: 0, y: 0, width: 0, height: 0 }, S('clipPath', { id: 'pl-clip' }, defs));
-        var band = S('g', { class: 'pl-band' }, flow), marks = S('g', {}, flow);
+        var band = S('g', { class: 'pl-band', mask: 'url(#pl-mask)' }, flow), marks = S('g', {}, flow);
         var C = { seed: k.color('--fig-seed'), cited: k.color('--fig-closure') };
 
-        // the headers: wide, columns as wide as their steps need (Step 1 drops two streams, Step 3 none)
+        // the headers: wide, each column starts where the print's box starts, so the print dissolves into them
         var segs = [], V0, hx = 0;
         if (wide) {
-          var WTS = [1.45, 1.1, 0.8, 0.95, 0.95], wsum = 5.25;
-          WTS.reduce(function (acc, w) { segs.push([acc, acc + W * w / wsum]); return acc + W * w / wsum; }, 0);
-          segs[4][1] = W;
+          PRINT.forEach(function (p, i) { segs.push([W * p, i < 4 ? W * PRINT[i + 1] : W]); });
           hb.forEach(function (b, i) { b.style.left = segs[i][0] + 'px'; b.style.top = '0px'; b.style.width = (segs[i][1] - segs[i][0] - 14) + 'px'; });
         } else {
           V0 = 34; hx = V0 + Hmax + 34;
@@ -155,7 +192,8 @@
           var lab = S('g', { class: 'pl-lab' }, g);
           var anchor = wide && !E.cited ? 'middle' : 'start'; // wide, a drop's label is centred under it; the cited one sits beside its stream
           var num = S('text', { class: 'pl-lab-n', x: 0, y: 0, 'text-anchor': anchor, text: (E.cited ? '+' : '') + nf(E.n) }, lab);
-          if (wide) wrap(E.cap, E.cited ? 170 : clamp(W * 0.1, 86, 120)).forEach(function (c, j) { S('text', { class: 'pl-lab-c', x: 0, y: 17 + 14 * j, 'text-anchor': anchor, text: c }, lab); });
+          var capW = wide ? Math.max(96, Math.min(120, (segs[E.step][1] - segs[E.step][0]) * 0.5)) : 0; // a narrow column wraps its longest caption, never a short one
+          if (wide) wrap(E.cap, E.cited ? 170 : capW).forEach(function (c, j) { S('text', { class: 'pl-lab-c', x: 0, y: 17 + 14 * j, 'text-anchor': anchor, text: c }, lab); });
           else {
             var nw = num.getBBox().width, room = W - hx;
             if (wrap(E.cap, room - nw - 7).length === 1) S('text', { class: 'pl-lab-c', x: (nw + 7).toFixed(1), y: 0, text: E.cap }, lab);
@@ -241,14 +279,21 @@
           (cited ? [[0, 0.1], [1 - solid, 0.85], [1, 1]] : [[0, 1], [solid, 0.85], [1, 0.1]]).forEach(function (st) {
             S('stop', { offset: st[0].toFixed(3), 'stop-color': col, 'stop-opacity': st[1] }, gr);
           });
+          // the glow: the same stream, lit all the way down to its count while it is hovered or chosen
+          var gl = S('linearGradient', { id: gid + 'h', gradientUnits: 'userSpaceOnUse', x1: g0[0], y1: g0[1], x2: g1[0], y2: g1[1] }, defs);
+          (cited ? [[0, 0.55], [1, 1]] : [[0, 1], [1, 0.55]]).forEach(function (st) {
+            S('stop', { offset: st[0], 'stop-color': col, 'stop-opacity': st[1] }, gl);
+          });
           var hit = S('rect', { class: 'pl-hit', rx: 6 }, e.g);
           var r = S('rect', { class: 'pl-stream', fill: 'url(#' + gid + ')' }, e.g);
-          e.g.insertBefore(r, e.g.firstChild);
+          var glow = S('rect', { class: 'pl-glow', fill: 'url(#' + gid + 'h)' }, e.g);
+          e.g.insertBefore(glow, e.g.firstChild);
+          e.g.insertBefore(r, glow);
           e.g.insertBefore(hit, r);
           e.stream = r; e.u0 = u0; e.v0 = v0; e.len = len; e.cited = cited;
           e.setLen = function (p) { // cited: grows from its label towards the band; a drop: from the band outwards
-            var bx = box(u0, u0 + sw, v0, v0 + Math.max(0, p) * len);
-            Object.keys(bx).forEach(function (kk) { r.setAttribute(kk, bx[kk]); });
+            var bx = box(u0, u0 + sw, v0, v0 + Math.max(0, p) * len), bg = box(u0 - 0.5, u0 + sw + 0.5, v0, v0 + Math.max(0, p) * len);
+            Object.keys(bx).forEach(function (kk) { r.setAttribute(kk, bx[kk]); glow.setAttribute(kk, bg[kk]); });
           };
           e.setLen(1);
           // the hit area (and focus ring): the stream and its label, with room for a finger, stopping at the band
@@ -261,50 +306,101 @@
           Object.keys(hb2).forEach(function (kk) { hit.setAttribute(kk, hb2[kk]); });
         });
 
-        // ---- columns (wide) or rows (phone): the tint of the hovered and the chosen step, and its hit area
+        // ---- columns (wide) or rows (phone): the tint of the lit and the chosen step, and its hit area
         var cols = segs.map(function (sg, i) {
           var p = M(sg[0], 0), q = M(sg[1], wide ? H : W);
           var rc = S('rect', { class: 'pl-col', x: p[0], y: p[1], width: q[0] - p[0], height: q[1] - p[1] }, tint);
-          rc.addEventListener('pointerenter', function (e) { hover(i); k.tip.show(e, stepTip(i)); });
-          rc.addEventListener('pointermove', function (e) { k.tip.show(e, stepTip(i)); });
-          rc.addEventListener('pointerleave', function () { hover(-1); k.tip.hide(); });
-          rc.addEventListener('click', function () { select(i); });
+          onPoint(rc, i, -1, function () { return stepTip(i); });
+          rc.addEventListener('click', function () { select(i, -1); });
           if (i) { var l0 = M(sg[0], 0), l1 = M(sg[0], wide ? H : W); S('line', { class: 'pl-sep', x1: l0[0], y1: l0[1], x2: l1[0], y2: l1[1] }, tint); }
           return rc;
         });
 
-        // ---- the marks answer hover, focus and click
-        evs.forEach(function (e) {
-          var g = e.g, html = e.E.tip, step = e.E.step;
-          g.addEventListener('pointerenter', function (ev) { hover(step); k.tip.show(ev, html); });
-          g.addEventListener('pointermove', function (ev) { k.tip.show(ev, html); });
-          g.addEventListener('pointerleave', function () { hover(-1); k.tip.hide(); });
-          g.addEventListener('focus', function (ev) { hover(step); k.tip.show(ev, html); });
-          g.addEventListener('blur', function () { hover(-1); k.tip.hide(); });
-          g.addEventListener('click', function () { select(step); });
-          g.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); select(step); } });
+        // ---- the streams answer hover, focus and click
+        evs.forEach(function (e, j) {
+          var g = e.g, step = e.E.step, html = function () { return e.E.tip; };
+          onPoint(g, step, j, html);
+          onKey(g, step, j, html);
+          g.addEventListener('click', function () { select(step, j); });
+          g.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); select(step, j); } });
         });
+
+        // ---- the mask that dims the band outside the lit column: white, with a dark veil left and right of the
+        // column (two rects that never touch, so the band gets no seam); spot() slides the gap between them
+        var vMax = wide ? H : W, mk = S('mask', { id: 'pl-mask', maskUnits: 'userSpaceOnUse', x: -40, y: -40, width: W + 80, height: H + 80 }, defs);
+        S('rect', { x: -40, y: -40, width: W + 80, height: H + 80, fill: '#fff' }, mk);
+        var veil = S('g', { opacity: 0 }, mk), veilA = S('rect', { fill: '#000' }, veil), veilB = S('rect', { fill: '#000' }, veil);
 
         svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
         svg.setAttribute('width', W);
         svg.setAttribute('height', H);
         chart.style.height = H + 'px';
-        if (!played) band.setAttribute('clip-path', 'url(#pl-clip)');
-        G = { wide: wide, segs: segs, cols: cols, clipRect: clipRect, band: band, evs: evs, U: U, W: W, H: H, lead: wide ? 150 : 80 };
-        paint();
-        if (!played) setFront(front);
+        // the entrance's timing in this geometry: when the front passes each stream (the cited one lands as it passes)
+        var tAt = function (u) { return SWEEP * inverse(soft, clamp(u / U, 0, 1)); };
+        evs.forEach(function (e) { e.t0 = e.cited ? Math.max(0, tAt(a) - FALL) : tAt(e.u); });
+        G = { wide: wide, segs: segs, cols: cols, clipRect: clipRect, band: band, evs: evs, U: U, W: W, H: H, vMax: vMax, box: box,
+              veil: veil, veilA: veilA, veilB: veilB, end: Math.max.apply(null, evs.map(function (e) { return e.t0 + FALL; }).concat(SWEEP)) };
+        paint(true);
+        if (ent) { band.setAttribute('clip-path', 'url(#pl-clip)'); setT(clock() - ent.t0); }
       }
 
-      // ------------------------------------------------------------ state
-      function paint() {
-        if (!G) return;
-        G.cols.forEach(function (c, i) { c.classList.toggle('is-sel', i === sel); c.classList.toggle('is-hov', i === hov && i !== sel); });
-        hb.forEach(function (b, i) { b.setAttribute('aria-expanded', String(i === sel)); b.classList.toggle('is-hov', i === hov); });
+      // ------------------------------------------------------------ state: what is lit
+      function lit() { // the step and stream in focus: the pointer's, else the keyboard's, else the open card's
+        if (ent) return { s: -1, e: -1 };  // nothing is lit while the flow runs in
+        if (ptr.s >= 0) return ptr;
+        if (kbd.s >= 0) return kbd;
+        return { s: sel, e: sel >= 0 ? selEv : -1 };
       }
-      function hover(i) { hov = i; paint(); }
-      function select(i) {
-        if (!played) finish();
-        sel = sel === i ? -1 : i;
+      function paint(snap) {
+        if (!G) return;
+        var F = lit();
+        G.cols.forEach(function (c, i) { c.classList.toggle('is-sel', i === sel); c.classList.toggle('is-hov', i === F.s && i !== sel); });
+        hb.forEach(function (b, i) {
+          b.setAttribute('aria-expanded', String(i === sel));
+          b.classList.toggle('is-hov', i === F.s);
+          b.classList.toggle('is-dim', F.s >= 0 && i !== F.s);
+        });
+        G.evs.forEach(function (e, j) {
+          e.g.classList.toggle('is-dim', F.s >= 0 && e.E.step !== F.s);
+          e.g.classList.toggle('is-on', j === F.e);
+        });
+        spot(F.s, snap);
+      }
+      function point(s, j) { ptr = { s: s, e: j }; paint(); }
+
+      // the band's spotlight: the gap in the mask's veil glides to the lit column, and the veil fades in or out
+      var sp = { u0: 0, u1: 0, a: 0 }, spT = { u0: 0, u1: 0, a: 0 }, spRaf = 0, spLast = 0;
+      function spot(i, snap) {
+        if (i >= 0) {
+          spT.u0 = G.segs[i][0]; spT.u1 = G.segs[i][1]; spT.a = DIM;
+          if (sp.a < 0.02) { sp.u0 = spT.u0; sp.u1 = spT.u1; } // from nothing lit: the gap starts at its column
+        } else spT.a = 0;
+        if (snap || !k.motion) { sp.u0 = spT.u0; sp.u1 = spT.u1; sp.a = spT.a; drawSpot(); return; }
+        if (!spRaf) { spLast = clock(); spRaf = requestAnimationFrame(spTick); }
+      }
+      function spTick() {
+        var now = clock(), kf = 1 - Math.exp(-Math.min(64, Math.max(0, now - spLast)) / 55); // ~95% in 165 ms
+        spLast = now;
+        sp.u0 += (spT.u0 - sp.u0) * kf; sp.u1 += (spT.u1 - sp.u1) * kf; sp.a += (spT.a - sp.a) * kf;
+        var done = Math.abs(spT.u0 - sp.u0) < 0.4 && Math.abs(spT.u1 - sp.u1) < 0.4 && Math.abs(spT.a - sp.a) < 0.004;
+        if (done) { sp.u0 = spT.u0; sp.u1 = spT.u1; sp.a = spT.a; }
+        drawSpot();
+        spRaf = done ? 0 : requestAnimationFrame(spTick);
+      }
+      function drawSpot() {
+        if (!G) return;
+        var ext = 40, a = G.box(-ext, sp.u0, -ext, G.vMax + ext), b = G.box(sp.u1, G.U + ext, -ext, G.vMax + ext);
+        Object.keys(a).forEach(function (kk) { G.veilA.setAttribute(kk, a[kk]); G.veilB.setAttribute(kk, b[kk]); });
+        G.veil.setAttribute('opacity', sp.a.toFixed(3));
+      }
+
+      // a click on a step (header or column) opens its card, a second one closes it; a click on a stream opens its
+      // step's card and keeps that stream lit
+      function select(i, j) {
+        if (ent) finish();
+        if (j < 0) { sel = sel === i ? -1 : i; selEv = -1; }
+        else if (sel === i && selEv === j) { sel = -1; selEv = -1; }
+        else { sel = i; selEv = j; }
         paint();
         if (sel < 0) { card.hidden = true; return; }
         renderCard(sel);
@@ -315,7 +411,7 @@
         if (sel < 0) return;
         var i = sel;
         if (card.contains(document.activeElement)) hb[i].focus();
-        sel = -1; paint(); card.hidden = true;
+        sel = -1; selEv = -1; paint(); card.hidden = true;
       }
       // Esc closes the card first (and keeps the stage open); with no card open it closes the stage as before
       document.addEventListener('keydown', function (e) {
@@ -324,44 +420,50 @@
         closeCard();
       });
 
-      // the entrance: the band is drawn from its start; each stream falls as the front passes it, its count running
-      // up while its step's count runs down, so every header shows the papers the band carries at the front
-      function prog(e, f) { return clamp((f - (e.cited ? e.u - G.lead : e.u)) / G.lead, 0, 1); }
-      function setFront(f) {
-        front = f;
+      // ------------------------------------------------------------ the entrance (k.onArrive)
+      // It starts from the step headers, where the print's boxes dissolved: the band grows from its start, each drop
+      // stream falls as the front passes it (the cited one lands as it passes), every count runs with its stream,
+      // and a step's own count runs from the papers it receives to the papers it passes on.
+      function setT(t) {
+        var f = soft(clamp(t / SWEEP, 0, 1)) * G.U, got = [0, 0, 0, 0, 0];
         G.clipRect.setAttribute('width', G.wide ? f : G.W);
         G.clipRect.setAttribute('height', G.wide ? G.H : f);
-        var got = [0, 0, 0, 0, 0];
         G.evs.forEach(function (e) {
-          var p = prog(e, f), q = ease(p), n = Math.round(e.E.n * q);
+          var p = clamp((t - e.t0) / FALL, 0, 1), q = soft(p), n = Math.round(e.E.n * q);
           e.setLen(q);
-          e.lab.style.opacity = e.cited ? clamp(p * 3, 0, 1) : q;
+          e.lab.style.opacity = e.cited ? clamp(p * 3, 0, 1) : clamp(q * 1.4, 0, 1);
           e.num.textContent = (e.cited ? '+' : '') + nf(n);
           got[e.E.step] += e.E.sign * n;
         });
         STEPS.forEach(function (st, i) {
           hb[i]._num.textContent = nf(st.from + got[i]);
-          hb[i].classList.toggle('is-wait', f < G.segs[i][0]);
+          hb[i].classList.toggle('is-wait', f < G.segs[i][0] + 1);
         });
       }
       function play() {
-        if (played || !G) return;
-        var t0 = performance.now(), dur = 2600;
+        if (!G || !k.motion) return;
+        finish();
+        ent = { t0: clock() };
+        G.band.setAttribute('clip-path', 'url(#pl-clip)');
+        setT(0);
         (function tick() {
-          if (played || !G) return;
-          var x = clamp((performance.now() - t0) / dur, 0, 1);
-          setFront(sine(x) * (G.U + G.lead));
-          if (x < 1) anim = requestAnimationFrame(tick);
+          if (!ent || !G) return;
+          var t = clock() - ent.t0;
+          setT(t);
+          if (t < G.end) anim = requestAnimationFrame(tick);
           else finish();
         })();
       }
       function finish() {
-        played = true;
+        var was = !!ent;
+        ent = null;
         if (anim) cancelAnimationFrame(anim);
+        anim = 0;
         if (!G) return;
         G.band.removeAttribute('clip-path');
         G.evs.forEach(function (e) { e.setLen(1); e.lab.style.opacity = ''; e.num.textContent = (e.cited ? '+' : '') + nf(e.E.n); });
         hb.forEach(function (b, i) { b._num.textContent = nf(STEPS[i].out); b.classList.remove('is-wait'); });
+        if (was) paint(); // a pointer moved onto the chart during the run lights its column now
       }
 
       // ------------------------------------------------------------ the card under the flow
@@ -457,18 +559,16 @@
         '<p>The counts are the paper’s own, from its account of how the dataset was built; the printed Fig. 1 shows the five steps without numbers. The band’s width is the papers a step passes on, to one linear scale; definitions and terms are another unit, so they appear only as numbers. Counts the paper does not print are differences of printed ones, such as ' + nf(X.not_open) + ' without an open copy = ' + nf(P.search_results) + ' − ' + nf(P.open_access) + '.</p>' +
         '<p><code>scripts/figs/pipeline.py</code> keeps each count as a constant, checks that it is printed in the paper, that the counts add up (' + nf(P.both_relevant) + ' + ' + P.judge_added + ' − ' + P.removed_errata + ' − ' + P.removed_no_title + ' = ' + nf(P.seed_papers) + '; ' + nf(P.seed_papers) + ' + ' + nf(P.closure_added) + ' = ' + nf(P.corpus_papers) + '; ' + nf(P.corpus_papers) + ' − ' + P.papers_no_def + ' − ' + P.papers_lost_last + ' = ' + nf(P.final_papers) + ') and that the released tables agree (' + nf(R.papers) + ' papers, ' + nf(R.definitions) + ' definitions, ' + nf(R.terms) + ' terms). Two things come from the released tables alone: how Step 5’s ' + X.papers_dropped_s5 + ' dropped papers split by origin (' + R.dropped_seed + ' seed, ' + R.dropped_cited + ' cited), and the papers listed under Steps 2 and 4, the three that give the most definitions of <i>media bias</i> (ties by title).</p>');
 
-      // ------------------------------------------------------------ go: the flow runs once the stage shows the panel
+      // ------------------------------------------------------------ go: drawn complete at rest; it flows in on arrival
       k.onResize(function (w) { draw(w); });
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (lastW) draw(lastW); });
-      if (!played) {
-        var t0 = performance.now();
-        (function wait() { // the printed figure still covers the panel while it arrives on the stage
-          if (played) return;
-          if (performance.now() - t0 > 5000) return finish();
-          if (panel.classList.contains('is-arriving') || panel.hidden || !panel.offsetParent) return requestAnimationFrame(wait);
-          setTimeout(play, 150);
-        })();
-      }
+      k.onArrive(function () {
+        // each arrival starts from the print: no card open, nothing lit
+        sel = -1; selEv = -1; card.hidden = true; ptr = { s: -1, e: -1 }; kbd = { s: -1, e: -1 };
+        k.tip.hide();
+        if (G) paint(true);
+        play();
+      });
     }
   });
 })();

@@ -7,10 +7,15 @@
    where more of the network lies.
 
    At rest an arrow of two or more papers shows its number where the print puts it; a one-paper arrow shows its 1 while
-   it or one of its terms is pointed at, focused or selected. Pointing at (or focusing) a term or an arrow lights its
-   links and dims the rest; a click (tap, Enter) opens a panel under the chart: the papers behind an arrow, with the
-   words each uses, or a term's broader and narrower terms. A second click, the panel's ×, Esc or a click on the empty
-   chart closes it. Entrance: the six query terms light up once (not with reduced motion). */
+   it or one of its terms is pointed at, focused or selected. Pointing at (or focusing) a term brightens it and its
+   links, lights its neighbours and dims the rest; pointing at an arrow thickens it and lights its two terms. A click
+   (tap, Enter) opens a panel under the chart: the papers behind an arrow, with the words each uses, or a term's broader
+   and narrower terms. A second click, the panel's ×, Esc or a click on the empty chart closes it.
+
+   Entrance (k.onArrive, each time the figure is revealed; not with reduced motion): it starts from the print's look,
+   the boxes drawn and the arrows faint, without numbers; the glow of the query terms fades in (media bias turning warm),
+   then every arrow draws from its narrower to its broader term, strongest first, its number appearing as the line
+   passes it; about 1.2 s in all. A pointer resting on the chart does not light anything until it moves. */
 (function () {
   'use strict';
   var MINW = 760;
@@ -81,27 +86,28 @@
       }
 
       // ------------------------------------------------------------ state
-      var sel = null, hover = null, drawn = null, woke = false;
+      // calm: the entrance is playing, so a pointer resting on the chart lights nothing (it lights on its next move)
+      var sel = null, hover = null, drawn = null, calm = false, show = null;
       var same = function (a, b) { return !!(a && b && a.type === b.type && a.i === b.i); };
 
+      // the focus (hover, keyboard focus, else the selection) is "hot"; its links and terms are "on"; the rest dims
       function paint() {
         if (!drawn) return;
-        var f = hover || sel, litE = {}, litN = {};
-        if (f && f.type === 'e') { litE[f.i] = 1; litN[E[f.i].s] = 1; litN[E[f.i].t] = 1; }
+        var f = hover || sel, litE = {}, litN = {}, hotE = -1, hotN = -1;
+        if (f && f.type === 'e') { hotE = f.i; litE[f.i] = 1; litN[E[f.i].s] = 1; litN[E[f.i].t] = 1; }
         if (f && f.type === 'n') {
-          litN[f.i] = 1;
+          hotN = f.i; litN[f.i] = 1;
           outs[f.i].concat(ins[f.i]).forEach(function (j) { litE[j] = 1; litN[E[j].s] = 1; litN[E[j].t] = 1; });
         }
         drawn.svg.classList.toggle('nw-focus', !!f);
         E.forEach(function (e, j) {
-          var on = !!litE[j];
-          drawn.edge[j].classList.toggle('on', on);
-          drawn.head[j].classList.toggle('on', on);
-          drawn.pill[j].classList.toggle('on', on);
+          var on = !!litE[j], hot = j === hotE;
+          [drawn.edge[j], drawn.head[j], drawn.pill[j]].forEach(function (m) { m.classList.toggle('on', on); m.classList.toggle('hot', hot); });
           drawn.pill[j].classList.toggle('picked', same(sel, { type: 'e', i: j }));
         });
         T.forEach(function (t, i) {
           drawn.node[i].classList.toggle('on', !!litN[i]);
+          drawn.node[i].classList.toggle('hot', i === hotN);
           drawn.node[i].classList.toggle('picked', same(sel, { type: 'n', i: i }));
         });
       }
@@ -132,8 +138,8 @@
       // ------------------------------------------------------------ the tooltip
       function tipEdge(j) {
         var e = E[j], r = E[pair[e.t + '>' + e.s]];
-        return '<b>' + esc(says(e)) + '</b>' +
-          (r ? '<br><span class="k">' + nf(r.n) + ' ' + (r.n === 1 ? 'says' : 'say') + ' the reverse</span>' : '') +
+        return '<b>' + nf(e.n) + ' ' + papersWord(e.n) + '</b>: ' + esc(T[e.s].name) + ' → ' + esc(T[e.t].name) +
+          (r ? '<br><span class="k">the other way: ' + nf(r.n) + ' ' + papersWord(r.n) + '</span>' : '') +
           (differs(e) ? '<br><span class="k">† the print shows ' + e.printed + '</span>' : '');
       }
       function count(n, kind) { return (n ? nf(n) : 'no') + ' ' + kind; }
@@ -202,6 +208,7 @@
       // ------------------------------------------------------------ drawing
       function draw(width) {
         var W = Math.max(width, MINW), s = W / CW, H = Math.ceil(CH * s);
+        stopEntrance();
         scroller.textContent = '';
         var svg = S('svg', { class: 'nw-svg', width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, role: 'group',
           'aria-label': 'The network of ' + T.length + ' terms and ' + E.length + ' arrows; each term and each number can be focused.' });
@@ -211,14 +218,18 @@
         svg.appendChild(S('rect', { class: 'nw-bg', x: 0, y: 0, width: W, height: H, onclick: function () { if (sel) select(null); } }));
         var gE = S('g'), gH = S('g'), gX = S('g'), gN = S('g'), gP = S('g');
         [gE, gH, gX, gN, gP].forEach(function (g) { svg.appendChild(g); });
-        var d = { svg: svg, s: s, edge: [], head: [], pill: [], node: [] };
+        var d = { svg: svg, s: s, gE: gE, edge: [], head: [], pill: [], node: [], o: [], oh: [], vis: [], tip: [] };
 
         function bind(target, f, tip) {
           target.addEventListener('pointerenter', function (ev) {
-            if (ev.pointerType !== 'mouse') return;
+            if (ev.pointerType !== 'mouse' || calm) return;
             hover = f; paint(); k.tip.show(ev, tip());
           });
-          target.addEventListener('pointermove', function (ev) { if (ev.pointerType === 'mouse') k.tip.show(ev, tip()); });
+          target.addEventListener('pointermove', function (ev) { // also lights a mark the pointer rested on during the entrance
+            if (ev.pointerType !== 'mouse' || calm) return;
+            if (!same(hover, f)) { hover = f; paint(); }
+            k.tip.show(ev, tip());
+          });
           target.addEventListener('pointerleave', function () { if (hover) { hover = null; paint(); } k.tip.hide(); });
           target.addEventListener('focus', function (ev) { hover = f; paint(); k.tip.show(ev, tip()); });
           target.addEventListener('blur', function () { hover = null; paint(); k.tip.hide(); });
@@ -230,13 +241,15 @@
 
         E.forEach(function (e, j) {
           var dd = pathD(paths[j], s), w = 0.9 + 0.55 * Math.log2(e.n), hl = 6 + 1.1 * Math.log2(e.n), hw = hl * 0.45;
-          var path = S('path', { class: 'nw-e', d: dd, 'stroke-width': w.toFixed(2), style: '--o:' + Math.min(0.9, 0.42 + 0.11 * Math.log2(e.n)).toFixed(2) });
+          var o = Math.min(0.9, 0.42 + 0.11 * Math.log2(e.n)), oh = Math.min(0.95, 0.55 + 0.11 * Math.log2(e.n));
+          var path = S('path', { class: 'nw-e', d: dd, style: '--o:' + o.toFixed(2) + ';--w:' + w.toFixed(2) + 'px' });
           gE.appendChild(path);
           // the line stops short of the head's tip
-          var L = path.getTotalLength();
-          path.setAttribute('stroke-dasharray', Math.max(0, L - hl * 0.7).toFixed(1) + ' ' + (L + 50).toFixed(1));
+          var L = path.getTotalLength(), vis = Math.max(0, L - hl * 0.7);
+          path.setAttribute('stroke-dasharray', vis.toFixed(1) + ' ' + (L + 50).toFixed(1));
           var t = ends[j], tx = t[0] * s, ty = t[1] * s, ux = t[2], uy = t[3];
-          var head = S('path', { class: 'nw-h', style: '--o:' + Math.min(0.95, 0.55 + 0.11 * Math.log2(e.n)).toFixed(2),
+          d.o[j] = o; d.oh[j] = oh; d.vis[j] = vis; d.tip[j] = [tx, ty];
+          var head = S('path', { class: 'nw-h', style: '--o:' + oh.toFixed(2),
             d: 'M' + tx.toFixed(1) + ' ' + ty.toFixed(1) +
               'L' + (tx - ux * hl - uy * hw).toFixed(1) + ' ' + (ty - uy * hl + ux * hw).toFixed(1) +
               'L' + (tx - ux * hl + uy * hw).toFixed(1) + ' ' + (ty - uy * hl - ux * hw).toFixed(1) + 'Z' });
@@ -276,8 +289,84 @@
         // a phone shows part of the network: the selection, or else media bias, in the middle
         centre(xOf(sel || { type: 'n', i: MB }), false);
         fade();
-        if (!woke) { woke = true; if (k.motion) svg.classList.add('nw-wake'); }
       }
+
+      // ------------------------------------------------------------ the entrance
+      var EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+      // the time (0..1) at which EASE has covered the share p of the way (its curve, inverted by sampling)
+      function reach(p) {
+        var x1 = 0.22, y1 = 1, x2 = 0.36, y2 = 1, prev = 0;
+        for (var i = 1; i <= 60; i++) {
+          var u = i / 60, v = 1 - u, y = 3 * v * v * u * y1 + 3 * v * u * u * y2 + u * u * u;
+          if (y >= p) return 3 * v * v * u * x1 + 3 * v * u * u * x2 + u * u * u;
+          prev = u;
+        }
+        return prev;
+      }
+      // how far along an arrow's line (0..1 of its drawn length) its number sits
+      function shareAt(path, vis, at) {
+        var best = 0, bd = Infinity;
+        for (var i = 0; i <= 40; i++) {
+          var p = path.getPointAtLength(vis * i / 40), dx = p.x - at[0], dy = p.y - at[1], dd = dx * dx + dy * dy;
+          if (dd < bd) { bd = dd; best = i / 40; }
+        }
+        return best;
+      }
+      function stopEntrance() {
+        if (!show) return;
+        var s = show; show = null; calm = false;
+        s.anims.forEach(function (a) { a.cancel(); });
+        if (s.under.parentNode) s.under.parentNode.removeChild(s.under);
+      }
+      function entrance() {
+        stopEntrance();
+        // the figure arrives with nothing lit or selected, a phone's view on media bias
+        hover = null; calm = false;
+        if (sel) { sel = null; renderDetail(); }
+        paint(); k.tip.hide();
+        centre(xOf({ type: 'n', i: MB }), false);
+        if (!drawn || !k.motion) return;
+        var d = drawn, anims = [], under = S('g', { class: 'nw-under', 'aria-hidden': 'true' });
+        var maxLog = Math.log2(Math.max.apply(null, E.map(function (e) { return e.n; })));
+        d.svg.insertBefore(under, d.gE);
+        var me = show = { anims: anims, under: under };
+        calm = true;
+        function play(m, frames, o) { anims.push(m.animate(frames, Object.assign({ fill: 'backwards' }, o))); }
+
+        // the glow of the query terms fades in; media bias turns from the print's query blue to its own warm
+        var qRect = d.node[T.findIndex(function (t, i) { return t.query && i !== MB; })].querySelector('rect');
+        var qs = getComputedStyle(qRect);
+        T.forEach(function (t, i) {
+          if (!t.query) return;
+          var r = d.node[i].querySelector('rect'), from = { filter: 'drop-shadow(rgba(0, 0, 0, 0) 0px 0px 0px)' };
+          if (i === MB) { from.fill = qs.fill; from.stroke = qs.stroke; }
+          play(r, [from], { duration: 560, delay: 40, easing: 'ease-in-out' }); // to the resting look
+        });
+        // each arrow draws from its narrower to its broader term over a faint copy of itself, strongest first;
+        // its head settles when the line arrives, its number appears as the line passes it
+        E.forEach(function (e, j) {
+          var str = Math.log2(e.n) / maxLog, delay = 340 + (1 - str) * 220, dur = 640;
+          var u = S('path', { class: 'nw-u', d: d.edge[j].getAttribute('d'), style: d.edge[j].getAttribute('style'),
+            'stroke-dasharray': d.edge[j].getAttribute('stroke-dasharray') });
+          under.appendChild(u);
+          play(u, [{ opacity: d.o[j] * 0.35 }, { opacity: 0 }], { duration: 260, delay: delay + dur * 0.55, fill: 'both' });
+          play(d.edge[j], [{ strokeDashoffset: d.vis[j] }, { strokeDashoffset: 0 }], { duration: dur, delay: delay, easing: EASE });
+          d.head[j].style.transformOrigin = d.tip[j][0].toFixed(1) + 'px ' + d.tip[j][1].toFixed(1) + 'px';
+          play(d.head[j], [{ opacity: d.oh[j] * 0.35, transform: 'scale(0.6)' }, { opacity: d.oh[j], transform: 'none' }],
+               { duration: 260, delay: delay + dur * reach(0.94), easing: EASE });
+          if (e.n > 1) {
+            var at = [e.at[0] * d.s, e.at[1] * d.s];
+            play(d.pill[j], [{ opacity: 0, transform: 'scale(0.7)' }, { opacity: 1, transform: 'none' }],
+                 { duration: 280, delay: delay + dur * reach(shareAt(d.edge[j], d.vis[j], at)) - 30, easing: EASE });
+          }
+        });
+        Promise.all(anims.map(function (a) { return a.finished; })).then(function () {
+          if (show !== me) return;
+          show = null; calm = false;
+          if (under.parentNode) under.parentNode.removeChild(under);
+        }, function () { /* cancelled: stopEntrance has tidied up */ });
+      }
+      k.onArrive(entrance);
 
       // Esc closes the panel first (and keeps the stage open); a second Esc closes the stage
       document.addEventListener('keydown', function (ev) {
@@ -285,7 +374,13 @@
       });
       // the figure opens again with nothing selected
       var stage = panel.closest('dialog');
-      if (stage) stage.addEventListener('close', function () { hover = null; if (sel) select(null); });
+      if (stage) stage.addEventListener('close', function () { stopEntrance(); hover = null; if (sel) select(null); else paint(); });
+      // Esc closes the stage: the chart hands back to the print from its resting look, lighting nothing on the way
+      if (stage) stage.addEventListener('cancel', function () {
+        if (panel.hidden) return;
+        calm = true; k.tip.hide();
+        if (hover) { hover = null; paint(); }
+      });
 
       k.method(
         '<p>Start from the six query terms (filled): <i>media bias</i>, <i>bias</i>, <i>misinformation</i>, ' +

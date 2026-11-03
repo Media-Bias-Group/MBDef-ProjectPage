@@ -6,6 +6,7 @@
   --nw-q-fill: color-mix(in srgb, var(--fig-closure) 42%, var(--fig-panel));
   --nw-mb-fill: color-mix(in srgb, var(--fig-warm) 30%, var(--fig-panel));
   --nw-o-stroke: color-mix(in srgb, var(--fig-closure) 38%, transparent);
+  --nw-hot: color-mix(in srgb, var(--fig-accent) 60%, #fff); /* the mark pointed at: the accent, brightened */
 }
 
 /* ------------------------------------------------------------ the chart's box (scrolls sideways on a phone) */
@@ -30,19 +31,27 @@
 .nw-key { margin: 0.35rem 0 0; font-family: var(--fig-mono); font-size: 0.75rem; color: var(--fig-muted); }
 .nw-off { color: var(--fig-warm); }
 
-/* links: one path, a head, and a wide invisible path to point at */
-.nw-e { fill: none; stroke: var(--fig-muted); stroke-linecap: round; opacity: var(--o, 0.5); transition: opacity 0.18s, stroke 0.18s; }
-.nw-h { fill: var(--fig-muted); opacity: var(--o, 0.6); transition: opacity 0.18s, fill 0.18s; }
+/* links: one path, a head, and a wide invisible path to point at. Pointing at a term lights its links ("on");
+   pointing at an arrow makes it "hot": thicker and brighter, its head grown */
+.nw-e {
+  fill: none; stroke: var(--fig-muted); stroke-width: var(--w, 1px); stroke-linecap: round; opacity: var(--o, 0.5);
+  transition: opacity 0.2s, stroke 0.2s, stroke-width 0.2s;
+}
+.nw-h { fill: var(--fig-muted); stroke: transparent; stroke-width: 0; stroke-linejoin: round; opacity: var(--o, 0.6); transition: opacity 0.2s, fill 0.2s, stroke 0.2s, stroke-width 0.2s; }
 .nw-hit { fill: none; stroke: transparent; stroke-width: 12px; pointer-events: stroke; cursor: pointer; }
 .nw-focus .nw-e:not(.on) { opacity: 0.07; }
 .nw-focus .nw-h:not(.on) { opacity: 0.1; }
 .nw-e.on { stroke: var(--fig-accent); opacity: 1; }
 .nw-h.on { fill: var(--fig-accent); opacity: 1; }
+.nw-e.hot { stroke: var(--nw-hot); stroke-width: calc(var(--w, 1px) + 1.8px); }
+.nw-h.hot { fill: var(--nw-hot); stroke: var(--nw-hot); stroke-width: 2.4px; }
+/* the entrance: the faint arrows the lines draw over (removed when it ends) */
+.nw-u { fill: none; stroke: var(--fig-muted); stroke-width: var(--w, 1px); stroke-linecap: round; pointer-events: none; }
 
 /* the numbers; a one-paper arrow's 1 only while it or one of its terms is lit */
-.nw-pill { cursor: pointer; transition: opacity 0.18s; }
-.nw-pill rect { fill: var(--fig-panel); stroke: var(--fig-line); stroke-width: 1; }
-.nw-pill text { font-family: var(--fig-display); font-weight: 600; fill: var(--fig-ink); font-variant-numeric: tabular-nums; pointer-events: none; }
+.nw-pill { cursor: pointer; transition: opacity 0.2s; transform-box: fill-box; transform-origin: center; }
+.nw-pill rect { fill: var(--fig-panel); stroke: var(--fig-line); stroke-width: 1; transition: fill 0.2s, stroke 0.2s; }
+.nw-pill text { font-family: var(--fig-display); font-weight: 600; fill: var(--fig-ink); font-variant-numeric: tabular-nums; pointer-events: none; transition: fill 0.2s; }
 .nw-pill.is-one text { fill: var(--fig-muted); font-weight: 500; }
 .nw-pill.is-big text { fill: #fff; }
 .nw-pill.is-big rect { stroke: color-mix(in srgb, var(--fig-ink) 35%, transparent); }
@@ -50,28 +59,32 @@
 .nw-svg .nw-pill.is-one:not(.on):not(.picked) { opacity: 0; pointer-events: none; }
 .nw-pill.on rect { stroke: var(--fig-accent); fill: color-mix(in srgb, var(--fig-accent) 18%, var(--fig-panel)); }
 .nw-pill.on text { fill: #fff; }
+.nw-pill.hot rect { stroke: var(--nw-hot); fill: color-mix(in srgb, var(--fig-accent) 34%, var(--fig-panel)); }
 .nw-pill.picked rect { fill: var(--fig-accent); stroke: var(--fig-accent); }
 .nw-pill.picked text { fill: var(--fig-panel); }
-.nw-pill:hover rect { stroke: var(--fig-accent); }
 
-/* the terms; the six query terms glow, media bias warm */
-.nw-node { cursor: pointer; transition: opacity 0.18s; }
-.nw-node rect { fill: var(--fig-panel-2); stroke: var(--nw-o-stroke); stroke-width: 1.2; transition: stroke 0.18s, fill 0.18s; }
+/* the terms; the six query terms glow, media bias warm. A lit term (a neighbour, an arrow's end) takes an accent
+   edge; the term pointed at also glows in the accent */
+.nw-node { cursor: pointer; transition: opacity 0.2s; }
+.nw-node rect { fill: var(--fig-panel-2); stroke: var(--nw-o-stroke); stroke-width: 1.2; transition: stroke 0.2s, stroke-width 0.2s, fill 0.2s, filter 0.2s; }
 .nw-node text, .nw-probe { font-family: var(--fig-display); font-weight: 500; fill: var(--fig-ink); pointer-events: none; }
+.nw-node text { transition: fill 0.2s; }
 .nw-node.is-q { --nw-glow: drop-shadow(0 0 9px color-mix(in srgb, var(--fig-closure) 55%, transparent)); }
 .nw-node.is-mb { --nw-glow: drop-shadow(0 0 11px color-mix(in srgb, var(--fig-warm) 55%, transparent)); }
 .nw-node.is-q rect { fill: var(--nw-q-fill); stroke: var(--fig-closure); stroke-width: 1.5; filter: var(--nw-glow); }
 .nw-node.is-mb rect { fill: var(--nw-mb-fill); stroke: var(--fig-warm); }
 .nw-node.is-q text, .nw-probe-q { font-weight: 600; fill: #fff; }
-.nw-node:hover rect { stroke: var(--fig-accent); }
 .nw-focus .nw-node:not(.on) { opacity: 0.28; }
+.nw-focus .nw-node.on:not(.is-q) rect { stroke: color-mix(in srgb, var(--fig-accent) 75%, transparent); fill: color-mix(in srgb, var(--fig-accent) 10%, var(--fig-panel-2)); }
+.nw-focus .nw-node.on text { fill: #fff; }
+.nw-node.hot rect {
+  stroke: var(--nw-hot); stroke-width: 2;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--fig-accent) 60%, transparent));
+}
+.nw-node.hot:not(.is-q) rect { fill: color-mix(in srgb, var(--fig-accent) 20%, var(--fig-panel-2)); }
 .nw-node.picked rect { stroke: var(--fig-accent); stroke-width: 2.5; }
 .nw-svg [tabindex]:focus { outline: none; }
-.nw-svg .nw-node:focus-visible rect, .nw-svg .nw-pill:focus-visible rect { stroke: var(--fig-accent); stroke-width: 2.5; }
-
-/* the entrance: as the printed figure fades, the query terms light up */
-.nw-wake .nw-node.is-q rect { animation: nwWake 1.3s ease-out 0.55s backwards; }
-@keyframes nwWake { from { filter: drop-shadow(0 0 0 transparent); } }
+.nw-svg .nw-node:focus-visible rect, .nw-svg .nw-pill:focus-visible rect { stroke: var(--nw-hot); stroke-width: 2.5; }
 
 /* ------------------------------------------------------------ the panel under the chart, after a click */
 .nw-detail {
@@ -123,6 +136,5 @@
   .nw-row { flex-direction: column; gap: 0.3rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .nw-e, .nw-h, .nw-pill, .nw-node, .nw-node rect { transition: none; }
-  .nw-wake .nw-node.is-q rect { animation: none; }
+  .nw-e, .nw-h, .nw-pill, .nw-pill rect, .nw-pill text, .nw-node, .nw-node rect, .nw-node text { transition: none; }
 }

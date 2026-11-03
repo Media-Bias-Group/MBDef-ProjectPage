@@ -21,6 +21,10 @@
      k.method(nodeOrHtml, title)       a "How this is made" toggle at the bottom
      k.tip.show(event, nodeOrHtml) / k.tip.hide()   the one tooltip, placed next to the pointer and kept on screen
      k.onResize(fn)                    fn(width) now and whenever the chart area's width changes (debounced)
+     k.onArrive(fn)                    fn() each time the figure is revealed on the stage: after the printed figure has
+                                       flown in and handed over (or at once when it opens by a link or the arrows).
+                                       Play the entrance here, from a state that looks like the print; draw the chart
+                                       complete at rest first, so a figure that never arrives still shows everything
      k.nf(n) / k.pct(part, whole, digits=1) / k.f(x, digits)   1,234 / 58.6% / 0.25
      k.color(name)                     a CSS custom property's value, e.g. k.color('--fig-closure')
      k.explorer(tab)                   the MBDef Explorer's address, at one of its tabs (overview, map, concepts,
@@ -28,7 +32,7 @@
      k.motion                          false when the reader asked for reduced motion */
 (function () {
   'use strict';
-  var registry = {}, started = new WeakSet(), pending = 0;
+  var registry = {}, pending = 0;
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   function el(tag, attrs) {
@@ -76,6 +80,7 @@
   var tipEl = null, tipFocus = null; // tipFocus: the element a keyboard-shown tooltip belongs to
   var tip = {
     show: function (ev, content) {
+      if (ev.target && ev.target.closest && ev.target.closest('.fig-panel.is-arriving, .fig-panel.is-settling') && ev.clientX != null) return; // not while the figure arrives, nor for a resting pointer
       if (!tipEl) tipEl = el('div', { class: 'fig-tip', role: 'tooltip' });
       var host = (ev.target && ev.target.closest && ev.target.closest('dialog[open]')) || document.body;
       if (tipEl.parentNode !== host) host.appendChild(tipEl);
@@ -146,6 +151,7 @@
         panel.appendChild(d);
         return d;
       },
+      onArrive: function (fn) { panel.addEventListener('fig:arrive', function () { fn(); }); },
       onResize: function (fn) {
         var target = k.body(), lastW = -1, t = 0;
         function run() { var w = Math.round(target.clientWidth); if (w && w !== lastW) { lastW = w; fn(w); } }
@@ -159,14 +165,24 @@
 
   function note(panel, msg) { panel.appendChild(el('p', { class: 'fig-fail', text: msg })); }
 
+  // the figure's data, fetched once: on first hover of its printed figure (prefetch) or when it opens
+  var dataOf = new WeakMap(), builtOf = new WeakMap();
+  function fetchData(panel) {
+    if (!dataOf.has(panel)) {
+      var src = panel.getAttribute('data-src');
+      dataOf.set(panel, src ? fetch(src).then(function (r) { if (!r.ok) throw new Error(r.status + ' ' + src); return r.json(); }) : Promise.resolve(null));
+    }
+    return dataOf.get(panel);
+  }
+
+  // build the figure once; the promise settles when it is drawn (or could not be)
   function start(panel) {
-    if (started.has(panel)) return;
-    started.add(panel);
-    var name = panel.getAttribute('data-fig'), def = registry[name], src = panel.getAttribute('data-src');
-    if (!def) { note(panel, 'This figure is not available yet.'); return; }
+    if (builtOf.has(panel)) return builtOf.get(panel);
+    var name = panel.getAttribute('data-fig'), def = registry[name];
+    if (!def) { note(panel, 'This figure is not available yet.'); builtOf.set(panel, Promise.resolve()); return builtOf.get(panel); }
     pending++;
     panel.classList.add('is-loading');
-    (src ? fetch(src).then(function (r) { if (!r.ok) throw new Error(r.status + ' ' + src); return r.json(); }) : Promise.resolve(null))
+    var done = fetchData(panel)
       .then(function (data) { return def.build(panel, data, kit(panel)); })
       .then(function () { panel.dataset.ready = '1'; })
       .catch(function (e) { console.error(e); note(panel, 'This figure could not be drawn: ' + e.message); panel.dataset.ready = 'failed'; })
@@ -175,10 +191,13 @@
         pending--;
         if (!pending) document.body.dataset.figsReady = '1';
       });
+    builtOf.set(panel, done);
+    return done;
   }
 
   window.FIG = {
     register: function (name, def) { registry[name] = def; },
+    prefetch: function (panel) { if (panel) fetchData(panel).catch(function () { /* start() reports it */ }); },
     hideTip: function () { tip.hide(); },
     start: start
   };

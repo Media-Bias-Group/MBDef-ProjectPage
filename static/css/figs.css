@@ -23,6 +23,7 @@
    caption explains it, so the panel is just the chart, what a click reveals, and the method one click away. */
 .fig-stage .fig-panel { margin: 0; padding: 0.5rem 0 0; background: transparent; border: none; box-shadow: none; min-height: 16rem; }
 .fig-stage .fig-panel.is-loading::after { left: 0; top: 0.5rem; }
+.fig-stage .fig-panel.is-arriving, .fig-stage .fig-panel.is-settling { pointer-events: none; } /* the figure answers the pointer once it has arrived and the pointer has moved */
 .fig-stage .fig-method { margin-top: 1.25rem; padding-top: 0.9rem; border-top: 1px solid var(--fig-grid); }
 
 /* ---------------------------------------------------------------- a panel */

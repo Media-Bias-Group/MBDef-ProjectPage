@@ -7,11 +7,18 @@
    Papers button, or a click on a subfield, lists the papers with the most definitions under the chart; a second
    click, the list's × or Esc closes it. On a narrow screen the columns become rows, in the same order, and a field
    opens in place. † marks a count that today's OpenAlex lookup gives differently; the numbers are in the tooltip and
-   in "How this is made". */
+   in "How this is made".
+
+   Arrival (k.onArrive): the columns grow up from the axis, largest first, their totals riding on top; then the inset
+   fades in and its bars extend. Hover, keyboard focus or a tap lights one mark and dims the rest: a column gets a
+   guide line to the axis and its value there; a subfield also lights its slice of its field's column. */
 (function () {
   'use strict';
 
   var YMAX = 4000, WIDE = 900, PH = 400; // the printed axis; the narrowest chart drawn as columns; the plot's height
+  var EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+  var GROW = 640, STEP = 30;             // the entrance: one column's growth, and the step between columns (largest first)
+  var MARKS = '.dsc-col, .dsc-rb, .dsc-sub';
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function day(iso) { var p = iso.split('-'); return +p[2] + ' ' + MONTHS[+p[1] - 1] + ' ' + p[0]; }
   function sum(n) { return n[0] + n[1]; }
@@ -20,6 +27,13 @@
   function niceStep(v) { // 1, 2, 2.5 or 5 × 10^k, at least v
     var p = Math.pow(10, Math.floor(Math.log10(v))), m = v / p;
     return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+  }
+  function shown(node) { return parseFloat(getComputedStyle(node).opacity) > 0.05; } // still visible, or fading out
+  function jump(nodes, set) { // place the nodes at once (no slide), when they are not on screen
+    nodes.forEach(function (n) { n.style.transition = 'none'; });
+    set();
+    void nodes[0].offsetWidth;
+    nodes.forEach(function (n) { n.style.transition = ''; });
   }
 
   FIG.register('disciplines', {
@@ -32,7 +46,13 @@
 
       var open = 0;      // the field shown in the inset: Social Sciences, as printed (-1: none)
       var list = null;   // the papers listed: null, 'f' (the open field) or a subfield's index
-      var W = 0, entered = false, cols = null;
+      var W = 0, cols = null;
+      var hot = null, leaveT = 0;           // the lit mark; the short wait before a mark the pointer left goes dark
+      var anims = [], growing = false;      // the entrance's animations, and whether it is still playing
+      var pointer = 'mouse', clickAt = null; // the last pointer's kind; where a click on a mark was (it redraws)
+      var rank = [];                        // each field's place by size: the entrance grows the largest first
+      F.map(function (f, i) { return i; }).sort(function (a, b) { return sum(F[b].n) - sum(F[a].n); })
+        .forEach(function (i, r) { rank[i] = r; });
 
       function share(a, b) { return pct(a, b, a / b < 0.1 ? 1 : 0); }   // 49%, 6.2%
       function sw(c) { return '<i class="dsc-sw ' + c + '"></i>'; }
@@ -40,20 +60,13 @@
       function todayLine(n, today) {
         return same(today, n) ? '' : '<br><span class="k">† OpenAlex today: ' + nf(sum(today)) + ' (' + nf(today[0]) + ' seed, ' + nf(today[1]) + ' cited)</span>';
       }
-      function hover(node, html) {
-        var show = function (e) { k.tip.show(e, html()); };
-        node.addEventListener('mouseenter', show);
-        node.addEventListener('mousemove', show);
-        node.addEventListener('mouseleave', k.tip.hide);
-        node.addEventListener('focus', function (e) { if (node.matches(':focus-visible')) show(e); });
-        node.addEventListener('blur', k.tip.hide);
-      }
+      function itemsOf(f) { return f.name === UNCL ? f.reasons : f.subfields; }
 
       // ---------------------------------------------------------------- tooltips
       function fieldTip(f) {
         var t = sum(f.n);
         return '<b>' + f.name + '</b><br>' + nf(t) + ' papers · ' + pct(t, N) + ' of all ' + nf(N) + '<br>' +
-          sw('s') + nf(f.n[0]) + ' seed · ' + sw('c') + nf(f.n[1]) + ' cited' +
+          sw('s') + nf(f.n[0]) + ' seed (' + share(f.n[0], t) + ') · ' + sw('c') + nf(f.n[1]) + ' cited (' + share(f.n[1], t) + ')' +
           (f.parts ? '<br><span class="k">' + f.parts.map(function (p) { return p[0] + ' ' + nf(p[1]); }).join(' + ') + '</span>' : '') +
           (f.name === UNCL ? '<br><span class="k">No field in OpenAlex</span>' : '') + todayLine(f.n, f.today);
       }
@@ -65,22 +78,104 @@
           todayLine(s.n, s.today);
       }
 
+      // ---------------------------------------------------------------- one mark: hover, focus and a tap light it
+      function mark(node, html) {
+        node._tip = html;
+        node.addEventListener('mouseenter', function (e) { light(node, e); });
+        node.addEventListener('mousemove', function (e) { if (hot === node) k.tip.show(e); else light(node, e); });
+        node.addEventListener('mouseleave', function () {
+          clearTimeout(leaveT);   // a moment's grace, so crossing the gap between two rows does not flicker
+          leaveT = setTimeout(function () { if (hot === node) unlight(); }, 60);
+        });
+        node.addEventListener('focus', function (e) { if (node.matches(':focus-visible')) light(node, e); });
+        node.addEventListener('blur', function () { if (hot === node && !node.matches(':hover')) unlight(); });
+      }
+      function light(node, ev) {
+        if (growing || !body.contains(node)) return;
+        clearTimeout(leaveT);
+        if (hot !== node) {
+          if (hot) unlight(true);
+          hot = node;
+          var key = node.getAttribute('data-k'), sub = key.charAt(0) === 's', i = +key.slice(1);
+          node.classList.add('is-hot');
+          node.closest('.dsc-subs, .dsc-cols, .dsc-rows').classList.add('is-hl');
+          if (cols) {
+            cols.classList.toggle('is-hl-open', !sub && i === open);
+            cols.classList.toggle('is-hl-sub', sub);
+          }
+          if (sub) slice(i); else if (cols) guide(i);
+        }
+        k.tip.show(ev, node._tip());
+      }
+      function unlight(keepTip) {
+        clearTimeout(leaveT);
+        if (!hot) return;
+        hot.classList.remove('is-hot');
+        body.querySelectorAll('.is-hl').forEach(function (g) { g.classList.remove('is-hl'); });
+        if (cols) { cols.classList.remove('is-hl-open', 'is-hl-sub'); guide(-1); }
+        slice(-1);
+        hot = null;
+        if (!keepTip) k.tip.hide();
+      }
+
+      // a column's guide line to the axis, and its value on the axis; it slides from one column to the next
+      function guide(i) {
+        var g = cols.querySelector('.dsc-guide'), y = cols.querySelector('.dsc-yval'), ticks = cols.querySelectorAll('.dsc-ytick');
+        var t = i < 0 ? -1e9 : sum(F[i].n), ph = cols.querySelector('.dsc-yax').offsetHeight;
+        ticks.forEach(function (n, j) { n.classList.toggle('is-near', Math.abs(j * 1000 - t) / YMAX * ph < 15); }); // under the value
+        if (i < 0) { g.classList.remove('on'); y.classList.remove('on'); return; }
+        var at = 100 * t / YMAX + '%';
+        var grid = cols.querySelector('.dsc-grid'), v = cols.querySelector('[data-k="f' + i + '"] .dsc-v');
+        var z = cols.getBoundingClientRect().width / cols.offsetWidth || 1;
+        var w = Math.max(0, (v.getBoundingClientRect().left - grid.getBoundingClientRect().left) / z - 3);
+        function set() { g.style.bottom = y.style.bottom = at; g.style.width = w + 'px'; }
+        if (shown(g)) set(); else jump([g, y], set);
+        y.textContent = nf(t);
+        g.classList.add('on'); y.classList.add('on');
+      }
+
+      // a subfield's slice of its field's column: its seed papers within the grey part, its cited within the blue
+      // (the printed counts for the printed inset; another field's subfields are shares of today's lookup)
+      function slice(j) {
+        var b = open < 0 ? null : body.querySelector('.dsc-col.is-open .dsc-v, .dsc-row.is-open > .dsc-rb .dsc-h');
+        if (!b) return;
+        var holder = b.closest('.dsc-col, .dsc-rb'), f = F[open], items = itemsOf(f), s = items[j];
+        if (!s) { holder.classList.remove('is-sliced'); return; }
+        var basis = f.printed_inset ? f.n : f.today, v = b.classList.contains('dsc-v');
+        var bands = b.querySelectorAll('.dsc-band'), slide = shown(bands[0]);
+        [0, 1].forEach(function (p) {
+          var part = bands[p].parentNode, before = 0;
+          for (var q = 0; q < j; q++) before += items[q].n[p];
+          var off = basis[p] ? before / basis[p] : 0, size = basis[p] ? s.n[p] / basis[p] : 0, txt = nf(s.n[p]);
+          var room = size * (v ? part.offsetHeight : part.offsetWidth), wide = v ? part.offsetWidth : room;
+          function set() {
+            bands[p].style[v ? 'bottom' : 'left'] = 100 * off + '%';
+            bands[p].style[v ? 'height' : 'width'] = 100 * size + '%';
+          }
+          if (slide) set(); else jump([bands[p]], set);
+          bands[p].firstChild.textContent = (v ? room >= 18 : true) && wide >= txt.length * 7.4 + 10 ? txt : '';
+        });
+        holder.classList.add('is-sliced');
+      }
+
       // ---------------------------------------------------------------- one stacked bar: seed, then cited
-      function bar(cls, n, f) {
+      function bar(cls, n, f, bands) {
         var t = Math.max(sum(n), 1), axis = cls === 'dsc-v' ? 'height' : 'width';
-        return el('span', { class: cls, style: '--f:' + f, 'data-n': n.join(',') },
-          el('i', { class: 'dsc-s', style: axis + ':' + (100 * n[0] / t) + '%' }, el('span', { class: 'dsc-in', text: nf(n[0]) })),
-          el('i', { class: 'dsc-c', style: axis + ':' + (100 * n[1] / t) + '%' }, el('span', { class: 'dsc-in', text: nf(n[1]) })));
+        function part(c, x) {
+          return el('i', { class: c, style: axis + ':' + (100 * x / t) + '%' }, el('span', { class: 'dsc-in', text: nf(x) }),
+            bands ? el('b', { class: 'dsc-band' }, el('span')) : null);
+        }
+        return el('span', { class: cls, style: '--f:' + f, 'data-n': n.join(',') }, part('dsc-s', n[0]), part('dsc-c', n[1]));
       }
       // its numbers: the total, and the two parts unless they show inside the bar (as printed)
       function count(cls, n, drift) {
         return el('span', { class: cls }, el('b', null, nf(sum(n)), dagger(drift)),
-          el('span', { class: 'dsc-pair', text: '(' + nf(n[0]) + ', ' + nf(n[1]) + ')' }));
+          el('span', { class: 'dsc-pair' }, '(', el('span', { class: 'ps', text: nf(n[0]) }), ', ', el('span', { class: 'pc', text: nf(n[1]) }), ')'));
       }
 
       // ---------------------------------------------------------------- a field's subfields (the inset, or a row opened in place)
       function detail(f, wide) {
-        var printed = !!f.printed_inset, uncl = f.name === UNCL, items = uncl ? f.reasons : f.subfields;
+        var printed = !!f.printed_inset, uncl = f.name === UNCL, items = itemsOf(f);
         var whole = printed ? sum(f.n) : sum(f.today);
         var top = Math.max.apply(null, items.map(function (s) { return sum(s.n); }));
         var step = niceStep(top / 3), smax = Math.ceil(top / step) * step;
@@ -107,7 +202,7 @@
             });
           row.appendChild(el('span', { class: 'dsc-sname', text: name }));
           row.appendChild(el('span', { class: 'dsc-track' }, bar('dsc-h', s.n, t / smax), count('dsc-end', s.n, drift)));
-          hover(row, function () { return subTip(f, s, whole); });
+          mark(row, function () { return subTip(f, s, whole); });
           rows.appendChild(row);
         });
 
@@ -154,19 +249,21 @@
           yax.appendChild(el('span', { class: 'dsc-ytick', style: 'bottom:' + (100 * v / YMAX) + '%', text: nf(v) }));
           if (v) grid.appendChild(el('i', { style: 'bottom:' + (100 * v / YMAX) + '%' }));
         }
+        yax.appendChild(el('b', { class: 'dsc-yval' }));
+        grid.appendChild(el('b', { class: 'dsc-guide' }));
         cols.appendChild(yax);
         cols.appendChild(grid);
         F.forEach(function (f, i) {
           var t = sum(f.n);
           var col = el('button', {
-            type: 'button', class: 'dsc-col' + (open === i ? ' is-open' : ''), style: '--i:' + i + ';grid-column:' + (i + 2), 'data-k': 'f' + i,
+            type: 'button', class: 'dsc-col' + (open === i ? ' is-open' : ''), style: 'grid-column:' + (i + 2), 'data-k': 'f' + i,
             'aria-expanded': open === i ? 'true' : 'false', 'aria-controls': 'dsc-inset',
             'aria-label': f.name + ': ' + nf(t) + ' papers, ' + nf(f.n[0]) + ' seed, ' + nf(f.n[1]) + ' cited.'
           },
-            el('span', { class: 'dsc-cell' }, count('dsc-top', f.n, !same(f.today, f.n)), bar('dsc-v', f.n, t / YMAX)),
+            el('span', { class: 'dsc-cell' }, count('dsc-top', f.n, !same(f.today, f.n)), bar('dsc-v', f.n, t / YMAX, open === i)),
             el('span', { class: 'dsc-name', text: f.name }));
           col.addEventListener('click', function () { setOpen(open === i ? -1 : i); });
-          hover(col, function () { return fieldTip(f); });
+          mark(col, function () { return fieldTip(f); });
           cols.appendChild(col);
         });
         cols.appendChild(key);
@@ -181,7 +278,7 @@
       function fit() {
         body.querySelectorAll('[data-n]').forEach(function (b) {
           var n = b.dataset.n.split(',').map(Number), t = Math.max(sum(n), 1), v = b.classList.contains('dsc-v');
-          var w = b.offsetWidth, h = b.offsetHeight;   // offset sizes: the entrance scales the bars
+          var w = b.offsetWidth, h = b.offsetHeight;
           var ok = n.every(function (x) {
             var need = nf(x).length * 7.4 + 10;
             return v ? h * x / t >= 22 && w >= need : w * x / t >= need;
@@ -203,7 +300,7 @@
         });
         if (lift) { cols.style.setProperty('--ph', Math.ceil(PH + lift) + 'px'); I = box(inset); }
         var c = cols.querySelector('.dsc-col.is-open'), v = c.querySelector('.dsc-v'), B = box(v);
-        var yt = B.b - v.offsetHeight, segs;   // the bar's top at rest (the entrance scales it)
+        var yt = B.b - v.offsetHeight, segs;   // the bar's top
         if (B.r <= I.l) segs = [[B.r, yt, I.l, I.t + 14], [B.r, B.b, I.l, I.b - 14]];          // left of the inset, as printed
         else if (B.l >= I.r) segs = [[B.l, yt, I.r, I.t + 14], [B.l, B.b, I.r, I.b - 14]];     // right of it, mirrored
         else { var yl = box(c.querySelector('.dsc-top')).t - 4; segs = [[B.l, yl, B.l, I.b], [B.r, yl, B.r, I.b]]; } // under it
@@ -219,13 +316,13 @@
         F.forEach(function (f, i) {
           var t = sum(f.n);
           var btn = el('button', {
-            type: 'button', class: 'dsc-rb', style: '--i:' + i, 'data-k': 'f' + i, 'aria-expanded': open === i ? 'true' : 'false',
+            type: 'button', class: 'dsc-rb', 'data-k': 'f' + i, 'aria-expanded': open === i ? 'true' : 'false',
             'aria-label': f.name + ': ' + nf(t) + ' papers, ' + nf(f.n[0]) + ' seed, ' + nf(f.n[1]) + ' cited.'
           },
             el('span', { class: 'dsc-rname', text: f.name }),
-            el('span', { class: 'dsc-track' }, bar('dsc-h', f.n, t / YMAX), count('dsc-end', f.n, !same(f.today, f.n))));
+            el('span', { class: 'dsc-track' }, bar('dsc-h', f.n, t / YMAX, open === i), count('dsc-end', f.n, !same(f.today, f.n))));
           btn.addEventListener('click', function () { setOpen(open === i ? -1 : i); });
-          hover(btn, function () { return fieldTip(f); });
+          mark(btn, function () { return fieldTip(f); });
           rows.appendChild(el('div', { class: 'dsc-row' + (open === i ? ' is-open' : '') }, btn, open === i ? detail(f, false) : null));
         });
         body.appendChild(rows);
@@ -234,14 +331,15 @@
       // ---------------------------------------------------------------- state and drawing
       function render() {
         var was = body.contains(document.activeElement) ? document.activeElement.getAttribute('data-k') : null;
+        stop();
+        hot = null;
+        clearTimeout(leaveT);
         k.tip.hide();
         body.textContent = '';
         cols = null;
         var wide = W >= WIDE;
         body.classList.toggle('is-wide', wide);
         body.classList.toggle('is-tight', wide && (W - 58) / 12 < 88);   // narrow columns: smaller names
-        body.classList.toggle('is-enter', !entered && k.motion);
-        if (!entered) { entered = true; setTimeout(function () { body.classList.remove('is-enter'); }, 2200); }
         if (wide) drawColumns(); else drawRows();
         if (!data.lookup.same_as_print) {
           body.appendChild(el('p', { class: 'dsc-dag' }, el('b', { text: '† ' }),
@@ -253,6 +351,16 @@
         place();
         var t = was && body.querySelector('[data-k="' + was + '"]');
         if (t) t.focus({ preventScroll: true });
+        relight();
+      }
+      // a click on a mark redraws the chart: the mark keeps its light (under the pointer, or where a finger tapped)
+      function relight() {
+        var at = clickAt, m = at && body.querySelector('[data-k="' + at.k + '"]');
+        clickAt = null;
+        if (!m || !m.matches(MARKS)) return;
+        var under = document.elementFromPoint(at.x, at.y), still = !!under && m.contains(under);
+        if (still) light(m, { target: m, clientX: at.x, clientY: at.y });
+        else if (at.touch) light(m, { target: m, clientX: at.x, clientY: m.getBoundingClientRect().bottom });
       }
       function setOpen(i) { open = i; list = null; render(); }
       function setList(v) {
@@ -267,6 +375,18 @@
         }
       }
 
+      body.addEventListener('pointerdown', function (e) { pointer = e.pointerType || 'mouse'; }, true);
+      body.addEventListener('click', function (e) {
+        var m = e.detail && e.target.closest && e.target.closest(MARKS);
+        clickAt = m ? { k: m.getAttribute('data-k'), x: e.clientX, y: e.clientY, touch: pointer !== 'mouse' } : null;
+      }, true);
+      // a tap outside the marks puts the light out (a touch screen has no pointer leaving)
+      document.addEventListener('pointerdown', function (e) {
+        if (!hot || e.pointerType === 'mouse') return;
+        var m = e.target.closest && e.target.closest(MARKS);
+        if (!m || !body.contains(m)) unlight();
+      }, true);
+
       // Esc closes the list first, then goes back to the printed view; a further Esc closes the stage
       document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape' || panel.hidden || !panel.offsetParent || (list == null && open <= 0)) return;
@@ -279,7 +399,63 @@
         if (t) t.focus({ preventScroll: true });
       }, true);
 
+      // each visit starts from the print: when the stage shows this figure again, it is the printed view
+      var dlg = panel.closest('dialog');
+      if (dlg && 'MutationObserver' in window) {
+        new MutationObserver(function () {
+          if (!dlg.open || panel.hidden) { unlight(); return; }
+          if (W && (open !== 0 || list != null)) { open = 0; list = null; render(); }
+        }).observe(dlg, { attributes: true, attributeFilter: ['open'] });
+        new MutationObserver(function () {
+          if (panel.hidden) unlight();
+          else if (dlg.open && W && (open !== 0 || list != null)) { open = 0; list = null; render(); }
+        }).observe(panel, { attributes: true, attributeFilter: ['hidden'] });
+      }
+
       k.onResize(function (w) { W = w; render(); });
+
+      // ---------------------------------------------------------------- the entrance, each time the figure arrives
+      function stop() {
+        anims.forEach(function (a) { a.cancel(); });
+        anims = [];
+        growing = false;
+      }
+      function enter() {
+        unlight();
+        stop();
+        if (!k.motion) return;
+        function play(node, frames, delay, dur) {
+          if (node) anims.push(node.animate(frames, { duration: dur, delay: delay, easing: EASE, fill: 'backwards' }));
+        }
+        // a bar extends from its base (clipped, so the numbers inside it are never squeezed); its total rides its end
+        function grow(b, lab, delay, dur) {
+          var v = b.classList.contains('dsc-v'), d = v ? b.offsetHeight : b.offsetWidth;
+          play(b, [{ clipPath: v ? 'inset(100% 0 0 0)' : 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }], delay, dur);
+          play(lab, [{ opacity: 0, transform: v ? 'translateY(' + d + 'px)' : 'translateX(' + -d + 'px)' },
+            { opacity: 1, offset: 0.35 }, { opacity: 1, transform: 'none' }], delay, dur);
+        }
+        body.querySelectorAll('.dsc-col, .dsc-rb').forEach(function (c) {
+          var i = +c.getAttribute('data-k').slice(1);
+          grow(c.querySelector('.dsc-v, .dsc-h'), c.querySelector('.dsc-top, .dsc-end'), rank[i] * STEP, GROW);
+        });
+        // then the open field's subfields: the inset fades in as the print's inset dissolves and its column nears the
+        // top, and its bars extend once the column is up
+        var det = body.querySelector('.dsc-inset, .dsc-open');
+        if (det) {
+          var t0 = (open >= 0 ? rank[open] * STEP : 0) + 100;
+          play(det, [{ opacity: 0 }, { opacity: 1 }], t0, 360);
+          play(cols && cols.querySelector('.dsc-lead'), [{ opacity: 0 }, { opacity: 1 }], t0 + 60, 360);
+          det.querySelectorAll('.dsc-sub').forEach(function (s, j) {
+            grow(s.querySelector('.dsc-h'), s.querySelector('.dsc-end'), t0 + 140 + j * 34, 520);
+          });
+        }
+        play(body.querySelector('.dsc-pp'), [{ opacity: 0 }, { opacity: 1 }], 300, 380);
+        if (!anims.length) return;
+        growing = true;   // the marks answer the pointer once the chart stands
+        var mine = anims;
+        Promise.all(mine.map(function (a) { return a.finished; })).then(function () { if (anims === mine) growing = false; }, function () {});
+      }
+      k.onArrive(enter);
 
       // ---------------------------------------------------------------- how this is made
       var R = data.rule;

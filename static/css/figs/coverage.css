@@ -1,6 +1,14 @@
 /* styles of the coverage figure (its own file): Fig. 4, the bias types of two classification schemes in MBDef.
    Wide: the types stand in columns grouped by level, as printed (.is-cols, a grid whose columns use subgrid rows:
-   bar, scheme 1, scheme 2, name). When the names do not fit side by side: one row per type (.is-rows). */
+   bar, scheme 1, scheme 2, name). When the names do not fit side by side: one row per type (.is-rows).
+   Focus (hover, keyboard, a tap): what is in focus keeps its colour, the rest takes .is-dim; .is-hot is the hovered
+   type's column, .is-lit a lit scheme row, level or legend key, .is-hover the mark under the pointer, .is-twin the
+   same paper's dots in the other types. */
+
+.fig-panel[data-fig="coverage"] {
+  --cov-quiet: #838e9d; /* quiet text that still reads on the stage (about 5.4:1) */
+  --cov-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
 
 /* ---------------------------------------------------------------- shared parts */
 .cov-sw { display: inline-block; flex: none; width: 0.68rem; height: 0.68rem; border-radius: 50%; }
@@ -10,23 +18,26 @@
 .cov-mark-fill { fill: var(--fig-ink); }
 .cov-mark-ring { fill: none; stroke: var(--fig-ink); stroke-width: 1.3; }
 
+.cov-count, .cov-name, .cov-mark, .cov-lv, .cov-scheme { transition: opacity 0.2s ease, color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+.cov-chart .is-dim { opacity: 0.42; }
+
 .cov-scheme {
   font-size: 12px; line-height: 1.3; font-weight: 500; color: var(--fig-ink) !important; border-radius: 4px;
   text-decoration: underline dotted var(--fig-faint); text-underline-offset: 3px;
 }
-.cov-scheme:hover { color: var(--fig-accent) !important; text-decoration-color: var(--fig-accent); }
+.cov-scheme.is-lit { color: var(--fig-accent) !important; text-decoration-color: var(--fig-accent); }
 
 .cov-name {
   appearance: none; background: none; border: 0; padding: 2px 0; margin: 0; cursor: pointer;
   font: 500 0.9rem/1.3 Inter, system-ui, sans-serif; color: var(--fig-ink); border-radius: 4px;
 }
-.cov-name:hover { color: var(--fig-accent); }
-.cov-chart.has-sel .cov-name { color: var(--fig-muted); }
-.cov-chart .is-on .cov-name { color: #fff; }
-.cov-chart .cov-name:hover { color: var(--fig-accent); }
+.cov-chart .is-hot .cov-name, .cov-chart .is-on .cov-name { color: #fff; }
 
 .cov-mark { display: inline-flex; padding: 5px; border-radius: 50%; cursor: pointer; }
-.cov-mark:hover { background: rgba(255, 255, 255, 0.08); }
+.cov-mark.is-lit { background: rgba(165, 156, 255, 0.13); }
+.cov-mark.is-hover { background: rgba(165, 156, 255, 0.26); box-shadow: 0 0 0 1px rgba(165, 156, 255, 0.55); }
+.cov-mark.is-lit .cov-mark-fill { fill: #fff; }
+.cov-mark.is-lit .cov-mark-ring { stroke: #fff; }
 
 .cov-count { line-height: 1.05; white-space: nowrap; }
 .cov-count b { font-family: var(--fig-display); font-weight: 600; font-size: 1.3rem; color: #fff; font-variant-numeric: tabular-nums; }
@@ -36,32 +47,42 @@
 .cov-dag { color: var(--fig-warm); font-family: Inter, system-ui, sans-serif; font-weight: 600; }
 .cov-count .cov-dag { font-size: 11px; vertical-align: super; margin-left: 1px; }
 
+/* the dots: one per paper. The hovered one grows a little and takes a ring; the same paper's dots elsewhere take
+   the ring too */
 .cov-dotcell { min-width: 0; }
-.cov-dots { display: block; overflow: visible; transition: opacity 0.2s; }
-.cov-chart.has-sel :not(.is-on) > .cov-bar .cov-dots,
-.cov-chart.has-sel .cov-type:not(.is-on) .cov-dots { opacity: 0.3; }
-.cov-dot { cursor: pointer; stroke: transparent; stroke-width: 2; transform-box: fill-box; transform-origin: center; }
+.cov-dots { display: block; overflow: visible; }
+.cov-dot {
+  cursor: pointer; stroke: transparent; stroke-width: 1.6; transform-box: fill-box; transform-origin: center;
+  transition: opacity 0.2s ease, transform 0.22s var(--cov-ease), stroke 0.15s ease;
+}
 .cov-dot.is-seed { fill: var(--fig-seed); }
 .cov-dot.is-cited { fill: var(--fig-closure); }
-.cov-dot:hover, .cov-dot.is-hit { stroke: #fff; }
+.cov-chart .cov-dot.is-dim { opacity: 0.26; }
+.cov-dot.is-twin, .cov-dot.is-hit { stroke: #fff; }
+.cov-dot.is-hover { stroke: #fff; transform: scale(1.3); }
 .cov-name:focus-visible, .cov-mark:focus-visible, .cov-scheme:focus-visible, .cov-close:focus-visible { outline: 2px solid var(--fig-accent); outline-offset: 2px; }
-.fig-panel .cov-dot:focus-visible { outline: none; stroke: var(--fig-accent); stroke-width: 3; }
+.fig-panel .cov-dot:focus { outline: none; }
+.fig-panel .cov-dot:focus-visible { stroke: var(--fig-accent); stroke-width: 2.4; }
 
-/* the one entrance: the dots grow in, bottom up, as the printed figure fades */
-.cov-chart.is-entering .cov-dot { animation: cov-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards; }
-@keyframes cov-in { from { opacity: 0; transform: translateY(5px) scale(0.2); } }
+/* the arrival (k.onArrive): the dots grow out of the printed bars, line by line from the bottom (each dot's delay is
+   set where it is drawn); in rows they run out to the right */
+.cov-chart.is-entering .cov-dot { animation: cov-rise 0.38s var(--cov-ease) backwards; }
+.cov-chart.is-rows.is-entering .cov-dot { animation-name: cov-run; }
+@keyframes cov-rise { from { opacity: 0; transform: translateY(5px) scale(0.35); } }
+@keyframes cov-run { from { opacity: 0; transform: translateX(-5px) scale(0.35); } }
 
 /* ---------------------------------------------------------------- columns, as printed */
 .cov-chart.is-cols { display: grid; grid-template-rows: repeat(5, auto); column-gap: 6px; }
 .is-cols .cov-lv {
   grid-row: 1; margin: 0 0 8px; padding: 0 0 7px; border-bottom: 1px solid var(--fig-line);
-  text-align: center; font: 600 1.12rem/1.2 var(--fig-display); color: #fff;
+  text-align: center; font: 600 1.12rem/1.2 var(--fig-display); color: #fff; cursor: default;
 }
+.is-cols .cov-lv.is-lit { border-bottom-color: var(--fig-accent); }
 .is-cols .cov-gut, .is-cols .cov-col { grid-row: 2 / span 4; display: grid; grid-template-rows: subgrid; }
 .is-cols .cov-gut { grid-column: 1; padding-right: 6px; }
 .cov-gut .cov-scheme { align-self: center; justify-self: end; text-align: right; text-wrap: balance; }
-.cov-col { min-width: 0; padding: 0 2px 10px; border-radius: 10px; cursor: pointer; transition: background-color 0.15s, box-shadow 0.15s; }
-.cov-col:hover { background: rgba(255, 255, 255, 0.035); }
+.cov-col { min-width: 0; padding: 0 2px 10px; border-radius: 10px; cursor: pointer; transition: background-color 0.2s ease, box-shadow 0.2s ease; }
+.cov-col.is-hot { background: rgba(255, 255, 255, 0.045); }
 .cov-col.is-on { background: var(--fig-panel-2); box-shadow: inset 0 -2px 0 var(--fig-accent); }
 .cov-bar { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 6px 0 14px; }
 .is-cols .cov-count { text-align: center; margin-bottom: 7px; }
@@ -80,10 +101,11 @@
 .cov-headrow .cov-scheme { justify-self: center; text-align: center; text-wrap: balance; }
 .is-rows .cov-lv {
   margin: 0.7rem 0 0.15rem; padding-top: 0.6rem; border-top: 1px solid var(--fig-grid);
-  font: 600 1rem/1.2 var(--fig-display); color: #fff;
+  font: 600 1rem/1.2 var(--fig-display); color: #fff; cursor: default;
 }
-.cov-type { cursor: pointer; transition: background-color 0.15s; }
-.cov-type:hover { background: rgba(255, 255, 255, 0.03); }
+.is-rows .cov-lv.is-lit { border-top-color: var(--fig-accent); }
+.cov-type { cursor: pointer; transition: background-color 0.2s ease, box-shadow 0.2s ease; }
+.cov-type.is-hot { background: rgba(255, 255, 255, 0.04); }
 .cov-type.is-on { background: var(--fig-panel-2); box-shadow: inset 2px 0 0 var(--fig-accent); }
 .is-rows .cov-name { text-align: left; }
 .is-rows .cov-mark { justify-self: center; }
@@ -95,9 +117,11 @@
   display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.3rem 1.3rem;
   margin: 0.9rem 0 0; font-size: 12.5px; color: var(--fig-muted);
 }
-.cov-legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.cov-legend span { display: inline-flex; align-items: center; gap: 0.4rem; transition: opacity 0.2s ease, color 0.2s ease; }
+.cov-legend .is-lit { color: var(--fig-ink); }
+.cov-legend .is-dim { opacity: 0.42; }
 .cov-legend.is-top { justify-content: flex-start; gap: 0.3rem 1rem; margin: 0 0 0.6rem; }
-.cov-diff { margin: 0.35rem 0 0; text-align: center; font-size: 12px; color: var(--fig-faint); }
+.cov-diff { margin: 0.35rem 0 0; text-align: center; font-size: 12px; color: var(--cov-quiet); }
 .cov-chart.is-rows ~ .cov-diff { text-align: left; }
 
 /* ---------------------------------------------------------------- the list of papers, opened by a click */
@@ -109,13 +133,13 @@
 .cov-dhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
 .cov-dtitle { margin: 0; font-family: var(--fig-display); font-weight: 600; font-size: 1.2rem; line-height: 1.25; color: #fff; }
 .cov-dmeta { margin-left: 0.35rem; font: 500 0.82rem Inter, system-ui, sans-serif; color: var(--fig-muted); white-space: nowrap; }
-.cov-drule { margin: 0.2rem 0 0; font-size: 0.8rem; line-height: 1.45; color: var(--fig-faint); }
+.cov-drule { margin: 0.2rem 0 0; font-size: 0.8rem; line-height: 1.45; color: var(--cov-quiet); }
 .cov-drule i { color: var(--fig-muted); }
 .cov-close {
   appearance: none; flex: none; width: 1.9rem; height: 1.9rem; border-radius: 50%; cursor: pointer;
   border: 1px solid var(--fig-line); background: var(--fig-panel-2); color: var(--fig-muted); font-size: 1.05rem; line-height: 1;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
-.cov-close:hover { color: #fff; border-color: var(--fig-accent); }
 .cov-list {
   list-style: none; margin: 0.7rem 0 0; padding: 0;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 0.45rem 0.8rem;
@@ -128,13 +152,19 @@
 .cov-item.is-hit { background: rgba(165, 156, 255, 0.12); border-color: var(--fig-accent); }
 .cov-item p { margin: 0; font-size: 0.82rem; line-height: 1.45; }
 .cov-it b { color: var(--fig-ink); font-weight: 600; }
-.cov-faint { color: var(--fig-faint); font-size: 0.76rem; }
+.cov-faint { color: var(--cov-quiet); font-size: 0.76rem; }
 .cov-iw { color: var(--fig-muted); margin-top: 0.15rem !important; }
 .cov-iq { color: var(--fig-muted); font-style: italic; margin-top: 0.2rem !important; overflow-wrap: anywhere; }
 .cov-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.2rem; margin: 0.75rem 0 0; }
 
+@media (hover: hover) { /* a tap leaves :hover behind on touch screens */
+  .cov-scheme:hover { color: var(--fig-accent) !important; text-decoration-color: var(--fig-accent); }
+  .cov-chart .cov-name:hover { color: var(--fig-accent); }
+  .cov-close:hover { color: #fff; border-color: var(--fig-accent); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .cov-dots, .cov-type, .cov-col { transition: none; }
+  .cov-dot { transition: opacity 0.2s ease, stroke 0.15s ease; }
+  .cov-dot.is-hover { transform: none; }
   .cov-chart.is-entering .cov-dot { animation: none; }
 }
 @media screen and (max-width: 768px) {

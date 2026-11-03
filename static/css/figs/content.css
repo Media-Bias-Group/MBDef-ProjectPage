@@ -1,65 +1,130 @@
 /* Fig. 3, interactive (static/js/figs/content.js): two bar charts side by side as printed (stacked on a phone), drawn
-   as HTML rows, and the detail of a clicked term. */
+   as HTML rows, and the detail of a clicked term. The bars grow on arrival (Web Animations in content.js); a top-n
+   switch moves them with the transitions below, which take as long as MOVE there. */
 
+.ct { --ct-ease: cubic-bezier(0.22, 1, 0.36, 1); --ct-move: 0.46s; --ct-dim: rgba(232, 235, 238, 0.42); }
 .ct-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; }
 .ct-grid.is-wide { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3.5rem; align-items: start; }
 .ct-grid.is-wide .ct-left { align-self: stretch; } /* tall as the terms, so a term's detail can stay in view beside them */
 .ct-chart { min-width: 0; }
 
 /* a chart's title, with the colour key (left) or the top-n switch (right) on the same line */
-.ct-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.35rem 1rem; min-height: 26px; margin-bottom: 0.7rem; }
+.ct-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.35rem 0.6rem; min-height: 26px; margin-bottom: 0.7rem; }
 .ct-eye {
   margin: 0; font-family: var(--fig-mono); font-size: 11.5px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase;
   line-height: 1.3; color: var(--fig-ink);
 }
-.ct-key { display: flex; gap: 0.9rem; margin: 0; font-size: 12px; color: var(--fig-muted); cursor: default; }
-.ct-key i, .ct-tsw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 0.4rem; }
-.ct-key i.s, .ct-tsw.s { background: var(--fig-seed); }
-.ct-key i.c, .ct-tsw.c { background: var(--fig-closure); }
 
-.ct-n { display: inline-flex; align-items: center; gap: 1px; font-family: var(--fig-mono); font-size: 11px; color: var(--fig-faint); }
+/* the colour key: each part lights that part of every bar */
+.ct-key { display: flex; gap: 0; margin: 0 -6px 0 -6px; }
+.ct-k {
+  appearance: none; display: inline-flex; align-items: center; padding: 4px 6px; border: 0; border-radius: 999px; background: none;
+  font: inherit; font-size: 12px; line-height: 1.2; color: var(--fig-muted); cursor: pointer;
+  transition: color 0.2s, background-color 0.2s, opacity 0.2s;
+}
+.ct-k:hover, .ct-k.is-on { color: #fff; background: rgba(255, 255, 255, 0.07); }
+.ct-k[aria-pressed="true"] { color: #fff; background: rgba(165, 156, 255, 0.2); }
+.ct-k:focus-visible { outline: 2px solid var(--fig-accent); outline-offset: 1px; }
+.ct.hl-s .ct-k[data-part="c"], .ct.hl-c .ct-k[data-part="s"] { opacity: 0.55; }
+.ct-k i, .ct-tsw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 0.35rem; }
+.ct-k i { transition: box-shadow 0.2s; }
+.ct-k i.s, .ct-tsw.s { background: var(--fig-seed); }
+.ct-k i.c, .ct-tsw.c { background: var(--fig-closure); }
+.ct-k.is-on i.s { box-shadow: 0 0 0 3px rgba(163, 172, 184, 0.3); }
+.ct-k.is-on i.c { box-shadow: 0 0 0 3px rgba(78, 163, 221, 0.35); }
+
+.ct-n { display: inline-flex; align-items: center; gap: 1px; font-family: var(--fig-mono); font-size: 11px; color: var(--fig-muted); }
 .ct-n span { margin-right: 0.3rem; letter-spacing: 0.08em; text-transform: uppercase; }
 .ct-n button {
   appearance: none; cursor: pointer; padding: 5px 8px; border: 0; border-radius: 999px; background: none;
-  font: inherit; line-height: 1; color: var(--fig-muted); font-variant-numeric: tabular-nums;
+  font: inherit; line-height: 1; color: var(--fig-muted); font-variant-numeric: tabular-nums; transition: color 0.2s, background-color 0.2s;
 }
-.ct-n button:hover { color: var(--fig-ink); background: rgba(255, 255, 255, 0.06); }
+.ct-n button:hover { color: var(--fig-ink); background: rgba(255, 255, 255, 0.07); }
 .ct-n button[aria-pressed="true"] { color: #fff; background: rgba(165, 156, 255, 0.2); }
 .ct-n button:focus-visible { outline: 2px solid var(--fig-accent); outline-offset: 1px; }
 
 /* ---------------------------------------------------------------- the bars */
 .ct-plot { position: relative; }
 .ct-area { position: relative; }
+.ct-area.is-sizing { overflow-x: visible; overflow-y: clip; } /* a top-n switch opens or closes the chart like a blind */
 .ct-lines { position: absolute; inset: 0; pointer-events: none; }
-.ct-lines i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--fig-grid); }
+.ct-lines i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--fig-grid); transition: left var(--ct-move) var(--ct-ease), opacity 0.3s; }
 .ct-lines i.zero { background: var(--fig-line); }
 .ct-rows { position: relative; }
 .ct-row { position: relative; display: flex; align-items: center; height: var(--row); border-radius: 6px; cursor: default; }
+.ct-row[hidden] { display: none; }
 .ct-row[role="button"] { cursor: pointer; }
 .ct-lab {
   flex: 0 0 calc(var(--x0) - 12px); margin-right: 12px; text-align: right;
   font-size: 13px; font-weight: 500; color: var(--fig-ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: flex-basis var(--ct-move) var(--ct-ease), color 0.2s;
 }
 .ct-track { position: relative; flex: 1 1 auto; height: var(--bar); }
-.ct-bar { position: absolute; left: 0; top: 0; bottom: 0; display: flex; border-radius: 3px; transition: filter 0.15s, opacity 0.2s; }
-.ct-s, .ct-c { display: flex; align-items: center; justify-content: center; flex: none; height: 100%; overflow: hidden; }
+.ct-bar {
+  position: absolute; left: 0; top: 0; bottom: 0; display: flex; border-radius: 3px;
+  transition: width var(--ct-move) var(--ct-ease), filter 0.2s, opacity 0.2s, box-shadow 0.2s;
+}
+.ct-s, .ct-c {
+  display: flex; align-items: center; justify-content: center; flex: none; height: 100%; overflow: hidden;
+  transition: width var(--ct-move) var(--ct-ease), opacity 0.2s, filter 0.2s;
+}
 .ct-s { background: var(--fig-seed); border-radius: 3px 0 0 3px; }
 .ct-c { background: var(--fig-closure); border-radius: 0 3px 3px 0; box-shadow: inset 1px 0 0 rgba(17, 24, 34, 0.55); }
 .ct-s em, .ct-c em {
   font-style: normal; font-size: 11.5px; font-weight: 600; color: var(--fig-panel); font-variant-numeric: tabular-nums; white-space: nowrap;
+  opacity: 0; transition: opacity 0.2s;
 }
+.ct-row.is-in .ct-s em, .ct-row.is-in .ct-c em { opacity: 1; }
 .ct-val {
   position: absolute; top: 50%; transform: translateY(-50%); white-space: nowrap;
-  font-size: 12px; font-weight: 600; color: var(--fig-ink); font-variant-numeric: tabular-nums; transition: opacity 0.2s;
+  font-size: 12px; font-weight: 600; color: var(--fig-ink); font-variant-numeric: tabular-nums;
+  transition: left var(--ct-move) var(--ct-ease), opacity 0.2s, color 0.2s;
 }
-.ct-row:hover .ct-lab { color: #fff; }
-.ct-row:hover .ct-bar { filter: brightness(1.12); }
+.ct-val b { font-weight: inherit; color: inherit; }
+.ct-val b, .ct-vp span { transition: color 0.2s; }
+.ct-vp { display: none; }
+.ct-row.is-paren .ct-vp { display: inline; }
+
+/* a lit bar (hover, focus, tap): brighter, its label white, the other rows quieter */
+.ct-rows.has-hot .ct-row:not(.is-hot):not(.is-open) .ct-bar,
+.ct-rows.has-hot .ct-row:not(.is-hot):not(.is-open) .ct-val { opacity: 0.35; }
+.ct-rows.has-hot .ct-row:not(.is-hot) .ct-lab { color: var(--fig-muted); }
+.ct-row.is-hot .ct-lab { color: #fff; }
+.ct-row.is-hot .ct-bar { filter: brightness(1.14); }
+/* one part of it: that part and its number, the other part quiet (the cited part ends at the bar's total) */
+.ct-row.is-hot.on-s .ct-s, .ct-row.is-hot.on-c .ct-c { opacity: 1; filter: brightness(1.08); }
+.ct-row.is-hot.on-s .ct-c, .ct-row.is-hot.on-c .ct-s { opacity: 0.28; }
+.ct-row.is-hot.on-s .ct-val, .ct-row.is-hot.on-c .ct-val { color: var(--ct-dim); }
+.ct-row.is-hot.on-c .ct-val b, .ct-row.is-hot.on-s .ct-vp .s, .ct-row.is-hot.on-c .ct-vp .c { color: #fff; }
+/* one part of every bar, from the key */
+.ct.hl-s .ct-c, .ct.hl-c .ct-s, .ct.hl-s .ct-hist rect.c, .ct.hl-c .ct-hist rect.s { opacity: 0.2; }
+.ct.hl-s .ct-s, .ct.hl-c .ct-c { filter: brightness(1.08); }
+.ct.hl-s .ct-val, .ct.hl-c .ct-val { color: var(--ct-dim); }
+.ct.hl-s .ct-vp .s, .ct.hl-c .ct-vp .c { color: #fff; }
+.ct-hist rect.s, .ct-hist rect.c { transition: opacity 0.2s; }
+
 /* an open term: its bar ringed, the others quieter */
-.ct-rows.has-open .ct-row:not(.is-open) .ct-bar, .ct-rows.has-open .ct-row:not(.is-open) .ct-val { opacity: 0.45; }
-.ct-rows.has-open .ct-row:not(.is-open):hover .ct-bar, .ct-rows.has-open .ct-row:not(.is-open):hover .ct-val { opacity: 0.8; }
-.ct-row.is-open .ct-lab { color: var(--fig-accent); font-weight: 600; }
+.ct-rows.has-open:not(.has-hot) .ct-row:not(.is-open) .ct-bar,
+.ct-rows.has-open:not(.has-hot) .ct-row:not(.is-open) .ct-val { opacity: 0.45; }
+.ct-row.is-open .ct-lab { color: var(--fig-accent); }
 .ct-row.is-open .ct-bar { box-shadow: 0 0 0 2px var(--fig-accent); }
+
+/* the guide: from the lit bar's end down to its value on the axis */
+.ct-guide {
+  position: absolute; left: 0; top: 0; bottom: -6px; width: 1px; margin-left: -0.5px; pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.5) 0 3px, transparent 3px 6px);
+  opacity: 0; transition: opacity 0.2s, transform 0.22s var(--ct-ease), top 0.22s var(--ct-ease);
+}
+.ct-guide.on { opacity: 1; }
+.ct-tag {
+  position: absolute; z-index: 1; top: -2px; left: 0; transform: translateX(-50%); pointer-events: none;
+  padding: 1px 5px; border-radius: 4px; background: var(--fig-panel-2); box-shadow: 0 0 0 1px var(--fig-line);
+  font-size: 11px; font-weight: 600; line-height: 16px; color: #fff; white-space: nowrap; font-variant-numeric: tabular-nums;
+  opacity: 0; transition: opacity 0.2s, left 0.22s var(--ct-ease);
+}
+.ct-tag.on { opacity: 1; }
+.ct-guide.is-snap, .ct-tag.is-snap { transition: opacity 0.2s; }
 
 /* labels above the bars when the names need more than a third of the width */
 .is-stacked .ct-row { flex-direction: column; align-items: stretch; justify-content: flex-end; padding-bottom: 3px; }
@@ -70,11 +135,15 @@
 .ct-axis span {
   position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap;
   font-size: 11px; color: var(--fig-muted); font-variant-numeric: tabular-nums;
+  transition: left var(--ct-move) var(--ct-ease), opacity 0.2s;
 }
-.ct-axt { margin: 2px 0 0; text-align: center; font-size: 12px; color: var(--fig-muted); }
+.ct-axis span.is-near { opacity: 0; }
+.ct-axt { margin: 2px 0 0; text-align: center; font-size: 12px; color: var(--fig-muted); transition: padding-left var(--ct-move) var(--ct-ease); }
 
 /* ---------------------------------------------------------------- the tooltip's parts */
 .ct-tsw { width: 0.62rem; height: 0.62rem; vertical-align: -0.05em; }
+.ct-tl { display: block; }
+.ct-tl.is-dim { opacity: 0.5; }
 .ct-tmean { margin-top: 0.4rem; }
 .ct-tex { margin-top: 0.3rem; color: var(--fig-muted); font-size: 0.8rem; }
 .ct-tex i { color: var(--fig-ink); }
@@ -85,7 +154,7 @@
 .ct-detail {
   position: relative; z-index: 1; padding: 0.7rem 0.85rem 0.8rem 1rem;
   background: var(--fig-panel-2); border: 1px solid var(--fig-line); border-left: 3px solid var(--fig-accent); border-radius: 10px;
-  animation: ctIn 0.2s ease-out;
+  animation: ctIn 0.22s var(--ct-ease);
 }
 .ct-rows .ct-detail { margin: 4px 0 10px; }
 @keyframes ctIn { from { opacity: 0; transform: translateY(-4px); } }
@@ -95,12 +164,13 @@
 .ct-close {
   appearance: none; flex: none; width: 1.75rem; height: 1.75rem; border-radius: 999px; cursor: pointer;
   background: transparent; border: 1px solid var(--fig-line); color: var(--fig-muted); font: inherit; font-size: 1.05rem; line-height: 1;
+  transition: color 0.2s, border-color 0.2s;
 }
 .ct-close:hover { color: #fff; border-color: var(--fig-accent); }
 .ct-close:focus-visible, .ct-more:focus-visible { outline: 2px solid var(--fig-accent); outline-offset: 2px; }
 .ct-dl { display: grid; grid-template-columns: 5.6rem minmax(0, 1fr); gap: 0.4rem 0.8rem; margin: 0.55rem 0 0; }
 .ct-dl dt {
-  padding-top: 0.15rem; font-family: var(--fig-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fig-faint);
+  padding-top: 0.15rem; font-family: var(--fig-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fig-muted);
 }
 .ct-dl dt[title] { cursor: help; }
 .ct-dl dd { margin: 0; min-width: 0; font-size: 0.86rem; line-height: 1.45; color: var(--fig-ink); font-variant-numeric: tabular-nums; }
@@ -109,7 +179,7 @@
 .ct-spell small { margin-left: 0.3rem; color: var(--fig-muted); font-size: 11px; }
 .ct-more {
   appearance: none; cursor: pointer; padding: 1px 7px; border: 1px solid var(--fig-line); border-radius: 999px; background: none;
-  font: inherit; font-size: 11px; color: var(--fig-muted);
+  font: inherit; font-size: 11px; color: var(--fig-muted); transition: color 0.2s, border-color 0.2s;
 }
 .ct-more:hover { color: #fff; border-color: var(--fig-accent); }
 .ct-yr { display: block; }
@@ -138,5 +208,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .ct-detail { animation: none; }
-  .ct-bar, .ct-val { transition: none; }
+  .ct-lab, .ct-bar, .ct-s, .ct-c, .ct-val, .ct-lines i, .ct-axis span, .ct-axt, .ct-guide, .ct-tag {
+    transition-property: color, opacity, filter, box-shadow;
+  }
 }

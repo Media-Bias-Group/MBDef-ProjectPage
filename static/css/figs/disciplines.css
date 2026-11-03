@@ -1,7 +1,15 @@
 /* styles of the disciplines figure (static/js/figs/disciplines.js): the printed columns with their inset; on a narrow
-   screen the same bars as rows; the papers list a click opens */
+   screen the same bars as rows; the papers list a click opens. The entrance is played from the script (k.onArrive);
+   here are the lit and dimmed states of hover, focus and a tap. */
 
-.dsc { --rsv: 7.6rem; --ax: 58px; position: relative; }
+.dsc {
+  --rsv: 7.6rem; --ax: 58px;
+  --quiet: #7d8796;              /* small quiet text: --fig-faint lightened to 4.5:1 and more on the stage */
+  --dim: 0.36;                   /* the marks beside the lit one */
+  --t: 0.2s ease;                /* every hover change */
+  --slide: 0.24s cubic-bezier(0.22, 1, 0.36, 1);   /* a guide or a slice moving to the next mark */
+  position: relative;
+}
 :where(.dsc) button { appearance: none; font: inherit; color: inherit; background: none; border: 0; margin: 0; padding: 0; text-align: inherit; cursor: pointer; }
 .dsc-sw, .dsc-key i, .dsc-dot { display: inline-block; flex: none; border-radius: 2px; }
 .dsc-sw.s, .dsc-key i.s, .dsc-dot.s, .dsc-s { background: var(--fig-seed); }
@@ -13,13 +21,17 @@
 .dsc-key i { width: 10px; height: 10px; margin-right: 0.45rem; vertical-align: -1px; }
 
 /* ---------------------------------------------------------------- the bars: seed grey, cited blue, the parts inside where they fit */
-.dsc-v, .dsc-h { display: flex; overflow: hidden; flex: none; }
-.dsc-v i, .dsc-h i { display: flex; align-items: center; justify-content: center; flex: none; font-style: normal; min-width: 0; min-height: 0; }
-.dsc-in { display: none; font: 600 12px/1 Inter, system-ui, sans-serif; color: #0d141d; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dsc-v, .dsc-h { display: flex; overflow: hidden; flex: none; transition: opacity var(--t), filter var(--t); }
+.dsc-v i, .dsc-h i { position: relative; display: flex; align-items: center; justify-content: center; flex: none; font-style: normal; min-width: 0; min-height: 0; }
+.dsc-in, .dsc-band span { font: 600 12px/1 Inter, system-ui, sans-serif; color: #0d141d; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dsc-in { display: none; transition: opacity var(--t); }
 .is-in > .dsc-cell .dsc-in, .is-in > .dsc-track .dsc-in { display: inline; }
 .is-in > .dsc-cell .dsc-pair, .is-in > .dsc-track .dsc-pair { display: none; }
 .dsc-dg { font: 600 11px/0 Inter, system-ui, sans-serif; color: var(--fig-warm); margin-left: 1px; vertical-align: 0.45em; }
 .dsc-pair { font-size: 11.5px; color: var(--fig-muted); font-variant-numeric: tabular-nums; }
+.dsc-pair span { transition: color var(--t); }
+.is-hot .dsc-pair .ps { color: var(--fig-ink); }
+.is-hot .dsc-pair .pc { color: var(--fig-closure); }
 
 /* ---------------------------------------------------------------- wide: the columns */
 .dsc-cols {
@@ -27,7 +39,8 @@
   grid-template-columns: var(--ax) repeat(12, minmax(0, 1fr)); grid-template-rows: var(--ph) auto;
 }
 .dsc-yax { grid-row: 1; grid-column: 1; position: relative; }
-.dsc-ytick { position: absolute; right: 9px; transform: translateY(50%); font: 11px/1 var(--fig-mono); color: var(--fig-faint); }
+.dsc-ytick { position: absolute; right: 9px; transform: translateY(50%); font: 11px/1 var(--fig-mono); color: var(--quiet); transition: opacity var(--t); }
+.dsc-ytick.is-near { opacity: 0; }
 .dsc-ytitle {
   position: absolute; left: 0; top: 50%; transform: translateY(-50%) rotate(180deg); writing-mode: vertical-rl;
   font-size: 11.5px; color: var(--fig-muted); white-space: nowrap;
@@ -35,20 +48,49 @@
 .dsc-grid { grid-row: 1; grid-column: 2 / -1; position: relative; border-bottom: 1px solid var(--fig-line); pointer-events: none; }
 .dsc-grid i { position: absolute; left: 0; right: 0; height: 1px; background: var(--fig-grid); }
 
-.dsc-col { grid-row: 1 / span 2; display: grid; grid-template-rows: var(--ph) auto; min-width: 0; border-radius: 8px; z-index: 1; }
-.dsc-col:hover { background: rgba(255, 255, 255, 0.035); }
+/* a lit column's guide line to the axis, and its value there; they slide to the next column */
+.dsc-guide {
+  position: absolute; left: 0; height: 0; border-top: 1px dashed rgba(232, 235, 238, 0.42); opacity: 0;
+  transition: opacity var(--t), bottom var(--slide), width var(--slide);
+}
+.dsc-yval {
+  position: absolute; right: 2px; transform: translateY(50%); padding: 3px 5px; border-radius: 4px;
+  font: 600 11px/1 var(--fig-mono); color: #fff; font-variant-numeric: tabular-nums;
+  background: var(--fig-panel-2); border: 1px solid rgba(232, 235, 238, 0.28); opacity: 0;
+  transition: opacity var(--t), bottom var(--slide);
+}
+.dsc-guide.on, .dsc-yval.on { opacity: 1; }
+
+.dsc-col {
+  grid-row: 1 / span 2; display: grid; grid-template-rows: var(--ph) auto; min-width: 0; border-radius: 8px; z-index: 1;
+  transition: background-color var(--t);
+}
+.dsc-col.is-hot { background: rgba(255, 255, 255, 0.04); }
 .dsc-col:focus-visible { outline: 2px solid var(--fig-accent); outline-offset: -2px; }
 .dsc-cell { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-height: 0; }
-.dsc-top { display: flex; flex-direction: column; align-items: center; margin-bottom: 5px; line-height: 1.2; white-space: nowrap; }
+.dsc-top {
+  display: flex; flex-direction: column; align-items: center; margin-bottom: 5px; line-height: 1.2; white-space: nowrap; transition: opacity var(--t);
+  text-shadow: 0 0 3px var(--stage-bg, #0c1016), 0 0 6px var(--stage-bg, #0c1016);   /* a guide line passing behind breaks around the numbers */
+}
 .dsc-top b { font: 600 15px/1.15 var(--fig-display); color: #fff; font-variant-numeric: tabular-nums; }
-.dsc-v { flex-direction: column-reverse; width: 64%; max-width: 76px; height: calc(var(--ph) * var(--f)); min-height: 2px; border-radius: 3px 3px 0 0; transform-origin: bottom; }
+.dsc-v { flex-direction: column-reverse; width: 64%; max-width: 76px; height: calc(var(--ph) * var(--f)); min-height: 2px; border-radius: 3px 3px 0 0; }
 .dsc-v i + i { box-shadow: inset 0 -1px 0 rgba(12, 16, 22, 0.55); }
-.dsc-col:hover .dsc-v { filter: brightness(1.12); }
-.dsc-name { padding: 9px 3px 4px; font-size: 12px; line-height: 1.25; color: var(--fig-muted); text-align: center; overflow-wrap: break-word; }
-.dsc-col:hover .dsc-name { color: var(--fig-ink); }
+.dsc-name { padding: 9px 3px 4px; font-size: 12px; line-height: 1.25; color: var(--fig-muted); text-align: center; overflow-wrap: break-word; transition: color var(--t), opacity var(--t); }
 .dsc-col.is-open .dsc-name { color: #fff; font-weight: 600; }
 .dsc.is-tight .dsc-name { padding: 9px 1px 4px; font-size: 11px; hyphens: auto; }
 .dsc-cols .dsc-key { grid-row: 1; grid-column: 12 / -1; justify-self: end; align-self: start; flex-direction: column; margin: 0 4px 0 0; z-index: 2; pointer-events: none; }
+
+/* lit: the column brightens, its name and its two parts' numbers light up; the other columns step back */
+.dsc-col.is-hot .dsc-v, .dsc-sub.is-hot .dsc-h, .dsc-rb.is-hot .dsc-h { filter: brightness(1.1) saturate(1.08); }
+.dsc-col.is-hot .dsc-name { color: #fff; }
+.dsc-cols.is-hl .dsc-col:not(.is-hot) .dsc-v { opacity: var(--dim); }
+.dsc-cols.is-hl .dsc-col:not(.is-hot) :is(.dsc-top, .dsc-name) { opacity: 0.45; }
+.dsc-cols.is-hl-sub .dsc-col:not(.is-open) .dsc-v { opacity: 0.55; }
+.dsc-cols.is-hl-sub .dsc-col:not(.is-open) :is(.dsc-top, .dsc-name) { opacity: 0.6; }
+/* another column lit: the inset's content steps back too (its card stays, over the grid) */
+.dsc-inset > * { transition: opacity var(--t); }
+.dsc-cols.is-hl:not(.is-hl-open) .dsc-inset > * { opacity: 0.4; }
+.dsc-cols.is-hl:not(.is-hl-open) .dsc-lead { opacity: 0.35; }
 
 /* the inset, where the print has it: over the small columns, tied to its column by dashed lines */
 .dsc-inset {
@@ -56,28 +98,35 @@
   padding: 0.65rem 1rem 0.55rem 0.75rem; background: var(--fig-panel); border: 1px solid var(--fig-line); border-radius: 14px;
   box-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.7);
 }
-.dsc-lead { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 2; }
-.dsc-lead line { stroke: var(--fig-muted); stroke-width: 1; stroke-dasharray: 4 4; opacity: 0.7; }
+.dsc-lead { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 2; transition: opacity var(--t); }
+.dsc-lead line { stroke: var(--fig-muted); stroke-width: 1; stroke-dasharray: 4 4; opacity: 0.7; transition: opacity var(--t), stroke var(--t); }
+.dsc-cols:is(.is-hl-open, .is-hl-sub) .dsc-lead line { stroke: var(--fig-ink); opacity: 1; }
 .dsc-ih { display: flex; align-items: center; gap: 0.4rem 0.75rem; flex-wrap: wrap; min-height: 28px; margin: 0 0 0.35rem 0.4rem; }
 .dsc-it { font: 600 1.05rem/1.2 var(--fig-display); color: #fff; }
-.dsc-src { font: 11px/1.2 var(--fig-mono); letter-spacing: 0.03em; color: var(--fig-faint); cursor: help; }
+.dsc-src { font: 11px/1.2 var(--fig-mono); letter-spacing: 0.03em; color: var(--quiet); cursor: help; }
 .dsc .dsc-pbtn {
   margin-left: auto; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.2;
   color: var(--fig-accent); background: rgba(165, 156, 255, 0.08); border: 1px solid rgba(165, 156, 255, 0.35);
+  transition: color var(--t), background-color var(--t), border-color var(--t);
 }
 .dsc .dsc-pbtn:hover { color: #fff; background: rgba(165, 156, 255, 0.18); }
 .dsc .dsc-pbtn[aria-pressed="true"] { color: #fff; background: rgba(165, 156, 255, 0.28); border-color: var(--fig-accent); }
 
 .dsc-subs { display: flex; flex-direction: column; gap: 1px; }
-.dsc-sub { display: grid; grid-template-columns: minmax(0, 34%) minmax(0, 1fr); align-items: center; column-gap: 0.7rem; min-height: 30px; padding: 3px 6px; border-radius: 6px; }
-.dsc-sub:hover, .dsc-sub:focus-visible { background: var(--fig-panel-2); }
+.dsc-sub {
+  display: grid; grid-template-columns: minmax(0, 34%) minmax(0, 1fr); align-items: center; column-gap: 0.7rem; min-height: 30px; padding: 3px 6px; border-radius: 6px;
+  transition: background-color var(--t), opacity var(--t);
+}
+.dsc-sub.is-hot { background: var(--fig-panel-2); }
 .dsc-sub[aria-pressed="true"] { background: rgba(165, 156, 255, 0.16); box-shadow: inset 2px 0 0 var(--fig-accent); }
+.dsc-subs.is-hl .dsc-sub:not(.is-hot) { opacity: 0.42; }
 .dsc-sub.is-static { cursor: default; }
 .dsc-sub:focus-visible, .dsc .dsc-pbtn:focus-visible, .dsc-rb:focus-visible, .dsc .dsc-x:focus-visible { outline: 2px solid var(--fig-accent); outline-offset: 1px; }
-.dsc-sname { text-align: right; font-size: 12.5px; line-height: 1.2; color: var(--fig-ink); }
-.dsc-sub[aria-pressed="true"] .dsc-sname { color: #fff; font-weight: 600; }
+.dsc-sname { text-align: right; font-size: 12.5px; line-height: 1.2; color: var(--fig-ink); transition: color var(--t); }
+.dsc-sub.is-hot .dsc-sname, .dsc-sub[aria-pressed="true"] .dsc-sname { color: #fff; }
+.dsc-sub[aria-pressed="true"] .dsc-sname { font-weight: 600; }
 .dsc-track { display: flex; align-items: center; min-width: 0; }
-.dsc-h { height: 16px; width: calc((100% - var(--rsv)) * var(--f)); min-width: 2px; border-radius: 0 3px 3px 0; transform-origin: left; }
+.dsc-h { height: 16px; width: calc((100% - var(--rsv)) * var(--f)); min-width: 2px; border-radius: 0 3px 3px 0; }
 .dsc-h i + i { box-shadow: inset 1px 0 0 rgba(12, 16, 22, 0.55); }
 .dsc-end { margin-left: 7px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .dsc-end b { font: 600 14px/1 var(--fig-display); color: #fff; }
@@ -85,14 +134,33 @@
 .dsc-iax { display: grid; grid-template-columns: minmax(0, 34%) minmax(0, 1fr); column-gap: 0.7rem; padding: 0 6px; }
 .dsc-iticks { position: relative; height: 18px; }
 .dsc-iticks::before { content: ''; position: absolute; left: 0; top: 0; width: calc(100% - var(--rsv)); height: 1px; background: var(--fig-line); }
-.dsc-iticks span { position: absolute; top: 4px; transform: translateX(-50%); font: 11px/1 var(--fig-mono); color: var(--fig-faint); }
+.dsc-iticks span { position: absolute; top: 4px; transform: translateX(-50%); font: 11px/1 var(--fig-mono); color: var(--quiet); }
 .dsc-iticks span:first-child { transform: none; }
+
+/* a lit subfield's slice of its field's bar: the rest of the bar darkens, the slice keeps its colour and its count */
+.dsc-col .dsc-v i::after, .dsc-rb .dsc-h i::after {
+  content: ''; position: absolute; inset: 0; z-index: 0; background: rgba(12, 16, 22, 0.68); opacity: 0;
+  transition: opacity var(--t); pointer-events: none;
+}
+.dsc-band {
+  position: absolute; z-index: 1; display: flex; align-items: center; justify-content: center; overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7); opacity: 0; pointer-events: none;
+  transition: opacity var(--t), bottom var(--slide), height var(--slide), left var(--slide), width var(--slide);
+}
+.dsc-v .dsc-band { left: 0; right: 0; bottom: 0; height: 0; }
+.dsc-h .dsc-band { top: 0; bottom: 0; left: 0; width: 0; }
+.dsc-s > .dsc-band { background: var(--fig-seed); }
+.dsc-c > .dsc-band { background: var(--fig-closure); }
+.is-sliced .dsc-v i::after, .is-sliced .dsc-h i::after, .is-sliced .dsc-band { opacity: 1; }
+.is-sliced .dsc-in { opacity: 0; }
 
 /* ---------------------------------------------------------------- narrow: the same bars as rows, a field opened in place */
 .dsc-rows { display: flex; flex-direction: column; gap: 2px; }
-.dsc-rb { display: grid; gap: 3px; width: 100%; padding: 6px 8px; border-radius: 8px; }
-.dsc-rb:hover { background: rgba(255, 255, 255, 0.035); }
-.dsc-rname { font-size: 13px; line-height: 1.3; color: var(--fig-ink); }
+.dsc-rb { display: grid; gap: 3px; width: 100%; padding: 6px 8px; border-radius: 8px; transition: background-color var(--t), opacity var(--t); }
+.dsc-rb.is-hot { background: rgba(255, 255, 255, 0.04); }
+.dsc-rows.is-hl .dsc-rb:not(.is-hot) { opacity: 0.45; }
+.dsc-rname { font-size: 13px; line-height: 1.3; color: var(--fig-ink); transition: color var(--t); }
+.dsc-rb.is-hot .dsc-rname { color: #fff; }
 .dsc-rb .dsc-h { height: 18px; }
 .dsc-row.is-open { background: rgba(255, 255, 255, 0.03); border-radius: 10px; margin: 2px 0 4px; }
 .dsc-row.is-open > .dsc-rb .dsc-rname { color: #fff; font-weight: 600; }
@@ -101,6 +169,7 @@
 .dsc-open .dsc-ih:empty { display: none; }
 .dsc-open .dsc-sub { grid-template-columns: minmax(0, 1fr); row-gap: 3px; padding: 4px 6px; }
 .dsc-open .dsc-sname { text-align: left; font-size: 12.5px; color: var(--fig-muted); }
+.dsc-open .dsc-sub.is-hot .dsc-sname { color: #fff; }
 
 /* ---------------------------------------------------------------- the papers list */
 .dsc-pp { margin-top: 0.9rem; padding: 0.75rem 0.9rem 0.85rem; border: 1px solid var(--fig-line); border-radius: 12px; background: rgba(255, 255, 255, 0.02); scroll-margin: 12px; }
@@ -111,27 +180,21 @@
 .dsc .dsc-x {
   flex: none; width: 1.9rem; height: 1.9rem; border-radius: 50%; text-align: center;
   border: 1px solid var(--fig-line); background: var(--fig-panel-2); color: var(--fig-muted); font-size: 1.05rem; line-height: 1;
+  transition: color var(--t), border-color var(--t);
 }
 .dsc .dsc-x:hover { color: #fff; border-color: var(--fig-accent); }
 .dsc-pl { list-style: none; margin: 0.6rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 0.45rem 0.8rem; }
 .dsc-pl li { display: grid; grid-template-columns: 0.55rem minmax(0, 1fr); align-content: start; column-gap: 0.55rem; padding: 0.5rem 0.6rem; border-radius: 8px; background: rgba(255, 255, 255, 0.025); }
 .dsc-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; margin-top: 0.42em; grid-row: span 2; }
 .dsc-pt { font-size: 13px; line-height: 1.4; color: var(--fig-ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.dsc-pm { margin-top: 0.15rem; font: 11px/1.4 var(--fig-mono); color: var(--fig-faint); }
+.dsc-pm { margin-top: 0.15rem; font: 11px/1.4 var(--fig-mono); color: var(--quiet); }
 
 /* the one line about today's lookup */
-.dsc-dag { margin: 0.75rem 0 0; font-size: 12px; line-height: 1.45; color: var(--fig-faint); }
+.dsc-dag { margin: 0.75rem 0 0; font-size: 12px; line-height: 1.45; color: var(--quiet); }
 .dsc-dag b { color: var(--fig-warm); font-weight: 600; }
 
-/* ---------------------------------------------------------------- one entrance: the bars grow, then their numbers appear */
-.dsc.is-enter .dsc-v { animation: dsc-up 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; animation-delay: calc(150ms + var(--i, 0) * 45ms); }
-.dsc.is-enter .dsc-rb .dsc-h { animation: dsc-right 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; animation-delay: calc(150ms + var(--i, 0) * 45ms); }
-.dsc.is-enter .dsc-top, .dsc.is-enter .dsc-lead { animation: dsc-fade 0.4s ease backwards; animation-delay: calc(650ms + var(--i, 0) * 45ms); }
-@keyframes dsc-up { from { transform: scaleY(0); } }
-@keyframes dsc-right { from { transform: scaleX(0); } }
-@keyframes dsc-fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .dsc.is-enter .dsc-v, .dsc.is-enter .dsc-rb .dsc-h, .dsc.is-enter .dsc-top, .dsc.is-enter .dsc-lead { animation: none; }
+  .dsc, .dsc * { --t: 0s; --slide: 0s; }
 }
 
 /* the method's paragraphs, apart */

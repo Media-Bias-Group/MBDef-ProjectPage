@@ -2,24 +2,33 @@
    card a step opens under it (static/js/figs/pipeline.js) */
 
 /* ---------------------------------------------------------------- the flow */
+/* quiet text (eyebrows, keys): --fig-faint is under 4.5:1 on the stage at these sizes; this grey passes on the stage
+   (5.5:1) and on the card (4.6:1) */
+.fig-panel[data-fig="pipeline"] { --pl-quiet: #808a99; --pl-lit: 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
 .pl-chart { position: relative; }
 .pl-svg { display: block; overflow: visible; }
-.pl-band, .pl-sep, .pl-stream { pointer-events: none; }
+.pl-band, .pl-sep, .pl-stream, .pl-glow { pointer-events: none; }
 .pl-seed { fill-opacity: 0.85; }
-.pl-col { fill: var(--fig-accent); fill-opacity: 0; cursor: pointer; transition: fill-opacity 0.15s; }
-.pl-col.is-hov { fill-opacity: 0.04; }
+.pl-col { fill: var(--fig-accent); fill-opacity: 0; cursor: pointer; transition: fill-opacity var(--pl-lit); }
+.pl-col.is-hov { fill-opacity: 0.045; }
 .pl-col.is-sel { fill-opacity: 0.075; }
 .pl-sep { stroke: var(--fig-grid); stroke-width: 1; }
 
-/* a stream that leaves (or joins) the band, with its count */
+/* a stream that leaves (or joins) the band, with its count; outside the lit column it dims, and the one under the
+   pointer (or chosen) glows down to its count */
 .pl-ev, .fig-panel .pl-ev:focus-visible { cursor: pointer; outline: none; } /* the ring is the hit area's stroke */
+.pl-ev { transition: opacity var(--pl-lit); }
+.pl-ev.is-dim { opacity: 0.4; }
 .pl-hit { fill: transparent; stroke: none; }
 .pl-ev:focus-visible .pl-hit { stroke: var(--fig-accent); stroke-width: 2; }
-.pl-ev:hover .pl-stream, .pl-ev:focus-visible .pl-stream { filter: brightness(1.4); }
-.fig-body text.pl-lab-n { font-family: var(--fig-display); font-size: 18px; font-weight: 600; fill: var(--fig-ink); font-variant-numeric: tabular-nums; }
-.fig-body text.pl-lab-c { font-size: 12px; fill: var(--fig-muted); }
+.pl-glow { opacity: 0; transition: opacity var(--pl-lit); }
+.pl-ev.is-on .pl-glow { opacity: 1; }
+.fig-body text.pl-lab-n { font-family: var(--fig-display); font-size: 18px; font-weight: 600; fill: var(--fig-ink); font-variant-numeric: tabular-nums; transition: fill var(--pl-lit); }
+.fig-body text.pl-lab-c { font-size: 12px; fill: var(--fig-muted); transition: fill var(--pl-lit); }
 .fig-body .is-cited text.pl-lab-n { fill: var(--fig-closure); }
-.fig-body .pl-ev:hover text.pl-lab-n, .fig-body .pl-ev:focus-visible text.pl-lab-n { fill: var(--fig-accent); }
+.fig-body .pl-ev.is-on text.pl-lab-n { fill: #fff; }
+.fig-body .pl-ev.is-on.is-cited text.pl-lab-n { fill: #8cc6ef; }
+.fig-body .pl-ev.is-on text.pl-lab-c { fill: var(--fig-ink); }
 
 /* the search results, written on the start of the band */
 .fig-body text.pl-in-n { font-family: var(--fig-display); font-size: 17px; font-weight: 600; fill: var(--fig-panel); }
@@ -31,19 +40,22 @@
   position: absolute; pointer-events: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
   margin: 0; padding: 0.55rem 0 0.2rem; text-align: left; cursor: pointer;
   appearance: none; background: none; border: 0; border-top: 2px solid var(--fig-line); border-radius: 0;
-  color: var(--fig-ink); font: inherit; transition: border-color 0.15s, opacity 0.3s;
+  color: var(--fig-ink); font: inherit; transition: border-color var(--pl-lit), opacity var(--pl-lit);
 }
-.pl-step:hover, .pl-step.is-hov { border-top-color: var(--fig-muted); }
+.pl-step.is-hov { border-top-color: var(--fig-ink); }
 .pl-step[aria-expanded="true"] { border-top-color: var(--fig-accent); }
-.pl-step.is-wait { opacity: 0.35; }
+.pl-step.is-dim { opacity: 0.45; }
 .pl-step:focus-visible { outline: 2px solid var(--fig-accent); outline-offset: 3px; border-radius: 4px; }
-.pl-eb { font-family: var(--fig-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fig-faint); }
-.pl-step[aria-expanded="true"] .pl-eb { color: var(--fig-accent); }
+.pl-eb { font-family: var(--fig-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pl-quiet); transition: color var(--pl-lit); }
+.pl-step.is-hov .pl-eb, .pl-step[aria-expanded="true"] .pl-eb { color: var(--fig-accent); }
 .pl-nm { font-size: 15px; font-weight: 600; line-height: 1.3; color: var(--fig-ink); }
 .pl-num { font-family: var(--fig-display); font-size: 28px; font-weight: 600; line-height: 1.1; color: #fff; font-variant-numeric: tabular-nums; margin-top: 0.15rem; }
 .pl-unit { font-size: 12.5px; color: var(--fig-muted); line-height: 1.3; }
 .pl-sub { font-size: 12px; color: var(--fig-muted); line-height: 1.35; }
 .pl-c { color: var(--fig-closure); }
+/* while the flow runs in, a step's numbers wait faintly until the front reaches its column */
+.pl-num, .pl-unit, .pl-sub { transition: opacity 0.28s ease-out; }
+.pl-step.is-wait .pl-num, .pl-step.is-wait .pl-unit, .pl-step.is-wait .pl-sub { opacity: 0.3; }
 
 /* ---------------------------------------------------------------- the card a step opens */
 .pl-card {
@@ -65,13 +77,13 @@
 .pl-card b { color: var(--fig-ink); }
 .pl-card i { color: var(--fig-ink); }
 .pl-kv { display: grid; grid-template-columns: 3.6rem minmax(0, 1fr); gap: 0.35rem 0.75rem; margin: 0; font-size: 0.85rem; line-height: 1.5; }
-.pl-kv dt { font-family: var(--fig-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fig-faint); padding-top: 0.2rem; }
+.pl-kv dt { font-family: var(--fig-mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pl-quiet); padding-top: 0.2rem; }
 .pl-kv dd { margin: 0; color: var(--fig-muted); }
 .pl-cap { font-size: 0.8rem !important; color: var(--fig-muted) !important; }
 
 /* a stacked bar and its key */
 .pl-barbox { margin: 0 0 0.9rem; }
-.pl-bar-t { display: block; margin-bottom: 0.3rem; font-family: var(--fig-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fig-faint); }
+.pl-bar-t { display: block; margin-bottom: 0.3rem; font-family: var(--fig-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pl-quiet); }
 .pl-bar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; gap: 1px; background: var(--fig-grid); }
 .pl-bar i { display: block; min-width: 2px; }
 .pl-bar-k { display: flex; flex-wrap: wrap; gap: 0.25rem 0.9rem; margin-top: 0.4rem; font-size: 0.8rem; color: var(--fig-muted); }
@@ -93,7 +105,7 @@
 .pl-rtrack i.is-opt { background: repeating-linear-gradient(135deg, var(--fig-seed) 0 5px, rgba(163, 172, 184, 0.45) 5px 9px); }
 .pl-rv { color: var(--fig-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pl-rv b { font-family: var(--fig-display); font-size: 1rem; }
-.pl-raxis { display: flex; justify-content: space-between; margin: 0 8.2rem 0 5.2rem; font-family: var(--fig-mono); font-size: 0.68rem; color: var(--fig-faint); }
+.pl-raxis { display: flex; justify-content: space-between; margin: 0 8.2rem 0 5.2rem; font-family: var(--fig-mono); font-size: 0.7rem; color: var(--pl-quiet); }
 
 /* papers behind a step */
 .pl-papers p { margin: 0 0 0.35rem; font-size: 0.86rem; line-height: 1.5; color: var(--fig-muted); }
@@ -112,5 +124,5 @@
   .pl-raxis { margin: 0 7.05rem 0 4.65rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pl-col, .pl-step { transition: none; }
+  .pl-col, .pl-step, .pl-ev, .pl-glow, .pl-eb, .pl-num, .pl-unit, .pl-sub, .fig-body text.pl-lab-n, .fig-body text.pl-lab-c { transition: none; }
 }
