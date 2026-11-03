@@ -391,8 +391,8 @@
         <h2 class="title is-3 has-text-centered">How MBDef was built</h2>
         <p class="section-lead">Five steps turn a keyword search into a dataset of definitions. Each step keeps what the next one needs and says what it leaves out.</p>
         <figure class="paper-figure wide">
-            <img src="static/images/paper/fig1.png" width="1476" height="205" loading="lazy"
-                 alt="The paper's Figure 1: the five-step pipeline: search, classification, extraction, closure and post-processing.">
+            <button type="button" class="fig-shot" data-open-fig="pipeline" aria-label="Open Fig. 1 interactively"><img src="static/images/paper/fig1.png" width="1476" height="205" loading="lazy"
+                 alt="The paper's Figure 1: the five-step pipeline: search, classification, extraction, closure and post-processing."><span class="fig-badge" aria-hidden="true"><i class="fas fa-hand-pointer"></i> Interactive</span></button>
             <figcaption>Paper, Fig. 1: the five-step pipeline.</figcaption>
           </figure>
           <ol class="pipeline">
@@ -427,11 +427,6 @@
               <span class="chip">103,476 definitions kept</span>
             </li>
           </ol>
-        <p class="fig-open-row"><button type="button" class="button is-rounded fig-open" data-open-fig="pipeline" aria-expanded="false" aria-controls="fig-pipeline"><span class="icon"><i class="fas fa-hand-pointer"></i></span><span>Explore the pipeline interactively</span></button></p>
-          <div class="fig-live" id="live-pipeline" hidden>
-            <div class="fig-live-bar"><span class="fig-live-k">Interactive, drawn from the released data</span><button type="button" class="fig-close" data-close-fig>Close <span aria-hidden="true">&times;</span></button></div>
-            <article class="fig-panel" id="fig-pipeline" data-fig="pipeline" data-src="static/data/figs/pipeline.json" hidden></article>
-          </div>
       </div>
     </section>
 
@@ -443,40 +438,25 @@
           <p class="section-lead">The paper's figures as printed. In each, grey counts the seed papers that the keyword search found, and blue the papers added through their citations; numbers in brackets are those two parts.</p>
           <div class="carousel results-carousel">
             <div class="item">
-              <img src="static/images/paper/fig2.png" width="1476" height="755" loading="lazy" alt="The paper's Figure 2: research disciplines of the 6,115 papers.">
+              <button type="button" class="fig-shot" data-open-fig="disciplines" aria-label="Open Fig. 2 interactively"><img src="static/images/paper/fig2.png" width="1476" height="755" loading="lazy" alt="The paper's Figure 2: research disciplines of the 6,115 papers."><span class="fig-badge" aria-hidden="true"><i class="fas fa-hand-pointer"></i> Interactive</span></button>
               <h2 class="subtitle has-text-centered">Fig. 2. The research disciplines of the 6,115 papers, from OpenAlex, one field per paper. Most come from the social sciences (58.6%), where media bias is mainly studied; grey are seed papers, blue are papers added through their citations.</h2>
-              <p class="fig-open-row"><button type="button" class="button is-rounded fig-open" data-open-fig="disciplines" aria-expanded="false" aria-controls="fig-disciplines"><span class="icon"><i class="fas fa-hand-pointer"></i></span><span>Explore Fig. 2 interactively</span></button></p>
             </div>
             <div class="item">
-              <img src="static/images/paper/fig3.png" width="1476" height="439" loading="lazy" alt="The paper's Figure 3: counts of extracted records by field, and the ten terms with the most definitions.">
+              <button type="button" class="fig-shot" data-open-fig="content" aria-label="Open Fig. 3 interactively"><img src="static/images/paper/fig3.png" width="1476" height="439" loading="lazy" alt="The paper's Figure 3: counts of extracted records by field, and the ten terms with the most definitions."><span class="fig-badge" aria-hidden="true"><i class="fas fa-hand-pointer"></i> Interactive</span></button>
               <h2 class="subtitle has-text-centered">Fig. 3. Left: how many items of each kind were extracted from the papers, definitions first (103,476). Right: the ten terms with the most definitions, led by <i>fake news</i> (1,891).</h2>
-              <p class="fig-open-row"><button type="button" class="button is-rounded fig-open" data-open-fig="content" aria-expanded="false" aria-controls="fig-content"><span class="icon"><i class="fas fa-hand-pointer"></i></span><span>Explore Fig. 3 interactively</span></button></p>
             </div>
             <div class="item">
-              <img src="static/images/paper/fig4.png" width="1476" height="538" loading="lazy" alt="The paper's Figure 4: how many MBDef papers define each of the eleven bias types that two published schemes share.">
+              <button type="button" class="fig-shot" data-open-fig="coverage" aria-label="Open Fig. 4 interactively"><img src="static/images/paper/fig4.png" width="1476" height="538" loading="lazy" alt="The paper's Figure 4: how many MBDef papers define each of the eleven bias types that two published schemes share."><span class="fig-badge" aria-hidden="true"><i class="fas fa-hand-pointer"></i> Interactive</span></button>
               <h2 class="subtitle has-text-centered">Fig. 4. All eleven bias types that two published classification schemes share are defined in MBDef. Reporting-level types such as gatekeeping (37 papers) are well covered; language-level types are rarely defined under these names.</h2>
-              <p class="fig-open-row"><button type="button" class="button is-rounded fig-open" data-open-fig="coverage" aria-expanded="false" aria-controls="fig-coverage"><span class="icon"><i class="fas fa-hand-pointer"></i></span><span>Explore Fig. 4 interactively</span></button></p>
             </div>
             <div class="item">
-              <img src="static/images/paper/fig5.png" width="972" height="384" loading="lazy" alt="The paper's Figure 5: similarity of definitions of the same term across papers, for ten terms.">
+              <button type="button" class="fig-shot" data-open-fig="divergence" aria-label="Open Fig. 5 interactively"><img src="static/images/paper/fig5.png" width="972" height="384" loading="lazy" alt="The paper's Figure 5: similarity of definitions of the same term across papers, for ten terms."><span class="fig-badge" aria-hidden="true"><i class="fas fa-hand-pointer"></i> Interactive</span></button>
               <h2 class="subtitle has-text-centered">Fig. 5. How similar two papers' definitions of the same term are (DefScore, 0 to 1), in MBDef-Gold. Most pairs score low: the median for <i>media bias</i> is 0.25.</h2>
-              <p class="fig-open-row"><button type="button" class="button is-rounded fig-open" data-open-fig="divergence" aria-expanded="false" aria-controls="fig-divergence"><span class="icon"><i class="fas fa-hand-pointer"></i></span><span>Explore Fig. 5 interactively</span></button></p>
             </div>
             <div class="item">
-              <img src="static/images/paper/fig6.png" width="1476" height="480" loading="lazy" alt="The paper's Figure 6: a network of narrower and broader terms around media bias, misinformation and propaganda.">
+              <button type="button" class="fig-shot" data-open-fig="network" aria-label="Open Fig. 6 interactively"><img src="static/images/paper/fig6.png" width="1476" height="480" loading="lazy" alt="The paper's Figure 6: a network of narrower and broader terms around media bias, misinformation and propaganda."><span class="fig-badge" aria-hidden="true"><i class="fas fa-hand-pointer"></i> Interactive</span></button>
               <h2 class="subtitle has-text-centered">Fig. 6. Narrower-to-broader links that papers report between terms around <i>media bias</i>, <i>fake news</i> and <i>propaganda</i>; numbers count the papers behind each link.</h2>
-              <p class="fig-open-row"><button type="button" class="button is-rounded fig-open" data-open-fig="network" aria-expanded="false" aria-controls="fig-network"><span class="icon"><i class="fas fa-hand-pointer"></i></span><span>Explore Fig. 6 interactively</span></button></p>
             </div>
-          </div>
-        </div>
-        <div class="container is-max-widescreen">
-          <div class="fig-live" id="live-figures" hidden>
-            <div class="fig-live-bar"><span class="fig-live-k">Interactive, drawn from the released data</span><button type="button" class="fig-close" data-close-fig>Close <span aria-hidden="true">&times;</span></button></div>
-            <article class="fig-panel" id="fig-disciplines" data-fig="disciplines" data-src="static/data/figs/disciplines.json" hidden></article>
-            <article class="fig-panel" id="fig-content" data-fig="content" data-src="static/data/figs/content.json" hidden></article>
-            <article class="fig-panel" id="fig-coverage" data-fig="coverage" data-src="static/data/figs/coverage.json" hidden></article>
-            <article class="fig-panel" id="fig-divergence" data-fig="divergence" data-src="static/data/figs/divergence.json" hidden></article>
-            <article class="fig-panel" id="fig-network" data-fig="network" data-src="static/data/figs/network.json" hidden></article>
           </div>
         </div>
       </div>
@@ -538,6 +518,32 @@
       </div>
     </section>
   </main>
+
+  <!-- The interactive figures: each opens from its printed figure (a [data-open-fig] button) on this stage;
+       static/js/figkit.js draws a figure on first open, static/js/index.js opens, steps through and closes the stage -->
+  <dialog class="fig-stage" id="fig-stage" aria-labelledby="fig-stage-title" tabindex="-1">
+    <div class="fig-stage-inner">
+      <header class="fig-stage-head">
+        <div class="fig-stage-text">
+          <p class="fig-stage-k" id="fig-stage-k">Fig. 1 &middot; interactive</p>
+          <h2 class="fig-stage-title" id="fig-stage-title"></h2>
+        </div>
+        <nav class="fig-stage-nav" aria-label="Figures">
+          <button type="button" class="fig-stage-btn" data-step-fig="-1" aria-label="Previous figure"><i class="fas fa-arrow-left"></i></button>
+          <button type="button" class="fig-stage-btn" data-step-fig="1" aria-label="Next figure"><i class="fas fa-arrow-right"></i></button>
+          <button type="button" class="fig-stage-btn" data-close-fig aria-label="Close"><i class="fas fa-times"></i></button>
+        </nav>
+      </header>
+      <div class="fig-stage-body">
+        <article class="fig-panel" data-fig="pipeline" data-num="1" data-title="How does a keyword search become 103,476 definitions?" data-src="static/data/figs/pipeline.json" hidden></article>
+        <article class="fig-panel" data-fig="disciplines" data-num="2" data-title="Which research fields do the 6,115 papers come from?" data-src="static/data/figs/disciplines.json" hidden></article>
+        <article class="fig-panel" data-fig="content" data-num="3" data-title="What does MBDef hold, and which terms do papers define most?" data-src="static/data/figs/content.json" hidden></article>
+        <article class="fig-panel" data-fig="coverage" data-num="4" data-title="Does MBDef cover the bias types that existing classification schemes name?" data-src="static/data/figs/coverage.json" hidden></article>
+        <article class="fig-panel" data-fig="divergence" data-num="5" data-title="Do papers agree on what a term means?" data-src="static/data/figs/divergence.json" hidden></article>
+        <article class="fig-panel" data-fig="network" data-num="6" data-title="How do media bias, misinformation and propaganda connect?" data-src="static/data/figs/network.json" hidden></article>
+      </div>
+    </div>
+  </dialog>
 
   <footer class="footer">
     <div class="container">

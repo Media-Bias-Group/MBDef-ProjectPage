@@ -8,41 +8,27 @@
   --nw-o-stroke: color-mix(in srgb, var(--fig-closure) 38%, transparent);
 }
 
-/* ------------------------------------------------------------ the chips and the legend */
-.nw-chips { align-items: center; margin-bottom: 0.6rem; }
-.nw-chips-k, .nw-detail-k, .nw-col-k {
-  font-family: var(--fig-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fig-faint);
-}
-.nw-chips-k { margin-right: 0.35rem; }
-.nw-chip-mb[aria-pressed="true"] { background: color-mix(in srgb, var(--fig-warm) 22%, transparent); border-color: var(--fig-warm); }
-.nw-legend { align-items: center; }
-.nw-legend > span { display: inline-flex; align-items: center; }
-.nw-legend i.nw-key { width: 1.5rem; height: 0.85rem; border-radius: 4px; }
-.nw-key-q { background: var(--nw-q-fill); border: 1px solid var(--fig-closure); box-shadow: 0 0 8px color-mix(in srgb, var(--fig-closure) 70%, transparent); }
-.nw-key-mb { background: var(--nw-mb-fill); border: 1px solid var(--fig-warm); box-shadow: 0 0 8px color-mix(in srgb, var(--fig-warm) 70%, transparent); }
-.nw-key-o { background: var(--fig-panel-2); border: 1px solid var(--nw-o-stroke); }
-.nw-key-arrow { margin-right: 0.35rem; overflow: visible; }
-.nw-key-arrow path:first-child { stroke: var(--fig-muted); stroke-width: 1.6; fill: none; }
-.nw-key-arrow path:last-child { fill: var(--fig-muted); }
-.nw-key-n {
-  display: inline-block; min-width: 1.9rem; margin-right: 0.35rem; padding: 0 0.4rem; border-radius: 999px; text-align: center;
-  font-family: var(--fig-display); font-weight: 600; font-size: 0.85rem; color: #fff;
-  background: var(--fig-panel); border: 1px solid var(--fig-line);
-}
-
-/* ------------------------------------------------------------ the stage */
+/* ------------------------------------------------------------ the chart's box (scrolls sideways on a phone) */
 .nw-scroll {
   position: relative; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
-  margin: 0 -0.25rem; padding: 0.4rem 0.25rem; border-radius: 12px;
-  background: radial-gradient(ellipse 60% 70% at 72% 50%, rgba(78, 163, 221, 0.07) 0%, rgba(78, 163, 221, 0) 70%),
+  margin: 0 -0.5rem; padding: 0.4rem 0.5rem; border-radius: 12px; /* room for the glow at the edges */
+  background: radial-gradient(ellipse 24% 65% at 82% 50%, rgba(78, 163, 221, 0.08) 0%, rgba(78, 163, 221, 0) 70%),
     radial-gradient(ellipse 40% 60% at 40% 50%, rgba(255, 184, 107, 0.05) 0%, rgba(255, 184, 107, 0) 70%);
   scrollbar-color: var(--fig-line) transparent;
 }
 .nw-scroll:focus { outline: none; }
+.nw-scroll.fade-l { -webkit-mask-image: linear-gradient(to right, transparent, #000 2.25rem); mask-image: linear-gradient(to right, transparent, #000 2.25rem); }
+.nw-scroll.fade-r { -webkit-mask-image: linear-gradient(to left, transparent, #000 2.25rem); mask-image: linear-gradient(to left, transparent, #000 2.25rem); }
+.nw-scroll.fade-l.fade-r {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 2.25rem, #000 calc(100% - 2.25rem), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 2.25rem, #000 calc(100% - 2.25rem), transparent);
+}
 .fig-body svg.nw-svg { max-width: none; overflow: visible; }
 .nw-bg { fill: transparent; }
-.nw-hint { display: none; margin: 0.4rem 0 0; font-family: var(--fig-mono); font-size: 0.72rem; color: var(--fig-faint); }
-.nw-hint:not([hidden]) { display: block; }
+
+/* the one key line under the chart */
+.nw-key { margin: 0.35rem 0 0; font-family: var(--fig-mono); font-size: 0.75rem; color: var(--fig-muted); }
+.nw-off { color: var(--fig-warm); }
 
 /* links: one path, a head, and a wide invisible path to point at */
 .nw-e { fill: none; stroke: var(--fig-muted); stroke-linecap: round; opacity: var(--o, 0.5); transition: opacity 0.18s, stroke 0.18s; }
@@ -53,7 +39,7 @@
 .nw-e.on { stroke: var(--fig-accent); opacity: 1; }
 .nw-h.on { fill: var(--fig-accent); opacity: 1; }
 
-/* the numbers */
+/* the numbers; a one-paper arrow's 1 only while it or one of its terms is lit */
 .nw-pill { cursor: pointer; transition: opacity 0.18s; }
 .nw-pill rect { fill: var(--fig-panel); stroke: var(--fig-line); stroke-width: 1; }
 .nw-pill text { font-family: var(--fig-display); font-weight: 600; fill: var(--fig-ink); font-variant-numeric: tabular-nums; pointer-events: none; }
@@ -61,20 +47,21 @@
 .nw-pill.is-big text { fill: #fff; }
 .nw-pill.is-big rect { stroke: color-mix(in srgb, var(--fig-ink) 35%, transparent); }
 .nw-focus .nw-pill:not(.on) { opacity: 0.15; }
+.nw-svg .nw-pill.is-one:not(.on):not(.picked) { opacity: 0; pointer-events: none; }
 .nw-pill.on rect { stroke: var(--fig-accent); fill: color-mix(in srgb, var(--fig-accent) 18%, var(--fig-panel)); }
 .nw-pill.on text { fill: #fff; }
 .nw-pill.picked rect { fill: var(--fig-accent); stroke: var(--fig-accent); }
 .nw-pill.picked text { fill: var(--fig-panel); }
 .nw-pill:hover rect { stroke: var(--fig-accent); }
 
-/* the terms */
+/* the terms; the six query terms glow, media bias warm */
 .nw-node { cursor: pointer; transition: opacity 0.18s; }
 .nw-node rect { fill: var(--fig-panel-2); stroke: var(--nw-o-stroke); stroke-width: 1.2; transition: stroke 0.18s, fill 0.18s; }
 .nw-node text, .nw-probe { font-family: var(--fig-display); font-weight: 500; fill: var(--fig-ink); pointer-events: none; }
-.nw-node.is-q rect { fill: var(--nw-q-fill); stroke: var(--fig-closure); stroke-width: 1.5;
-  filter: drop-shadow(0 0 9px color-mix(in srgb, var(--fig-closure) 55%, transparent)); }
-.nw-node.is-mb rect { fill: var(--nw-mb-fill); stroke: var(--fig-warm);
-  filter: drop-shadow(0 0 11px color-mix(in srgb, var(--fig-warm) 55%, transparent)); }
+.nw-node.is-q { --nw-glow: drop-shadow(0 0 9px color-mix(in srgb, var(--fig-closure) 55%, transparent)); }
+.nw-node.is-mb { --nw-glow: drop-shadow(0 0 11px color-mix(in srgb, var(--fig-warm) 55%, transparent)); }
+.nw-node.is-q rect { fill: var(--nw-q-fill); stroke: var(--fig-closure); stroke-width: 1.5; filter: var(--nw-glow); }
+.nw-node.is-mb rect { fill: var(--nw-mb-fill); stroke: var(--fig-warm); }
 .nw-node.is-q text, .nw-probe-q { font-weight: 600; fill: #fff; }
 .nw-node:hover rect { stroke: var(--fig-accent); }
 .nw-focus .nw-node:not(.on) { opacity: 0.28; }
@@ -82,63 +69,60 @@
 .nw-svg [tabindex]:focus { outline: none; }
 .nw-svg .nw-node:focus-visible rect, .nw-svg .nw-pill:focus-visible rect { stroke: var(--fig-accent); stroke-width: 2.5; }
 
-/* before the entrance */
-.nw-pre .nw-e, .nw-pre .nw-h, .nw-pre .nw-pill { opacity: 0; }
+/* the entrance: as the printed figure fades, the query terms light up */
+.nw-wake .nw-node.is-q rect { animation: nwWake 1.3s ease-out 0.55s backwards; }
+@keyframes nwWake { from { filter: drop-shadow(0 0 0 transparent); } }
 
-/* ------------------------------------------------------------ the tooltip's list */
-.nw-tip-list { margin: 0.35rem 0 0.3rem; padding-left: 1rem; }
-.nw-tip-list li { margin: 0.1rem 0; }
-
-/* ------------------------------------------------------------ the detail under the chart */
+/* ------------------------------------------------------------ the panel under the chart, after a click */
 .nw-detail {
-  margin-top: 0.9rem; padding: 0.9rem 1rem 1rem; border-radius: 12px;
-  background: var(--fig-panel-2); border: 1px solid var(--fig-grid); min-height: 6.5rem;
+  margin-top: 0.75rem; padding: 0.7rem 0.8rem 0.75rem 1rem; border-radius: 12px;
+  background: var(--fig-panel-2); border: 1px solid var(--fig-grid);
+  scroll-margin-bottom: 0.75rem;
 }
-.nw-detail-k { margin: 0 0 0.25rem; }
-.nw-detail-lead { margin: 0 0 0.6rem; color: var(--fig-muted); font-size: 0.92rem; }
-.nw-detail-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
-.nw-detail-h { margin: 0; font-family: var(--fig-display); font-weight: 500; font-size: 1.3rem; line-height: 1.3; color: var(--fig-ink); }
+.nw-detail[hidden] { display: none; }
+.nw-detail-top { display: flex; align-items: center; gap: 0.6rem 0.9rem; flex-wrap: wrap; }
+.nw-detail-h { flex: 1 1 18rem; min-width: 0; margin: 0; font-family: var(--fig-display); font-weight: 500; font-size: 1.15rem; line-height: 1.3; color: var(--fig-ink); }
 .nw-detail-h b { font-weight: 600; color: #fff; }
 .nw-detail-h i { color: #fff; }
-.nw-detail-sub { margin: 0.45rem 0 0; font-size: 0.86rem; color: var(--fig-muted); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .nw-muted { color: var(--fig-muted); font-size: 0.9em; }
+.nw-ext { flex: none; }
 .nw-close {
-  appearance: none; flex: none; width: 2rem; height: 2rem; border-radius: 8px; cursor: pointer;
-  font-size: 1.2rem; line-height: 1; color: var(--fig-muted); background: transparent; border: 1px solid var(--fig-line);
+  appearance: none; flex: none; width: 1.9rem; height: 1.9rem; margin-left: auto; border-radius: 8px; cursor: pointer;
+  font-size: 1.15rem; line-height: 1; color: var(--fig-muted); background: transparent; border: 1px solid var(--fig-line);
 }
 .nw-close:hover { color: var(--fig-ink); border-color: var(--fig-accent); }
-.nw-close:focus-visible, .nw-mini:focus-visible { outline: 2px solid var(--fig-accent); outline-offset: 2px; }
-.nw-start, .nw-minis { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.nw-close:focus-visible, .nw-mini:focus-visible, .nw-ext:focus-visible { outline: 2px solid var(--fig-accent); outline-offset: 2px; }
+.nw-minis { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .nw-mini {
-  appearance: none; cursor: pointer; font: inherit; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 0.45rem;
-  padding: 0.3rem 0.4rem 0.3rem 0.7rem; border-radius: 999px; color: var(--fig-ink);
+  appearance: none; flex: none; cursor: pointer; font: inherit; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.22rem 0.3rem 0.22rem 0.65rem; border-radius: 999px; color: var(--fig-ink);
   background: var(--fig-panel); border: 1px solid var(--fig-line);
 }
-.nw-mini b { font-family: var(--fig-display); font-weight: 600; min-width: 1.5rem; padding: 0 0.35rem; border-radius: 999px; text-align: center; color: #fff; background: rgba(165, 156, 255, 0.22); }
+.nw-mini b { font-family: var(--fig-display); font-weight: 600; min-width: 1.4rem; padding: 0 0.3rem; border-radius: 999px; text-align: center; color: #fff; background: rgba(165, 156, 255, 0.22); }
 .nw-mini:hover { border-color: var(--fig-accent); }
-.nw-legend-papers { margin: 0.7rem 0 0.4rem; font-size: 0.8rem; color: var(--fig-faint); }
-.nw-dot { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; flex: none; vertical-align: 0.05em; }
+.nw-row { display: flex; align-items: baseline; gap: 0.75rem; margin-top: 0.6rem; }
+.nw-row-k {
+  flex: none; width: 5.5rem; font-family: var(--fig-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fig-faint);
+}
+.nw-dot { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; flex: none; }
 .nw-dot.is-seed { background: var(--fig-seed); }
 .nw-dot.is-cited { background: var(--fig-closure); }
-.nw-papers { list-style: none; margin: 0; padding: 0 0.25rem 0 0; max-height: 22rem; overflow-y: auto; scrollbar-color: var(--fig-line) transparent; }
-.nw-papers li { padding: 0.5rem 0; border-top: 1px solid var(--fig-grid); }
+.nw-papers { list-style: none; margin: 0.55rem 0 0; padding: 0 0.25rem 0 0; max-height: 15rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: var(--fig-line) transparent; }
+.nw-papers li { padding: 0.4rem 0; border-top: 1px solid var(--fig-grid); }
 .nw-paper { display: flex; align-items: baseline; gap: 0.5rem; }
-.nw-paper .nw-dot { align-self: center; }
-.nw-title { flex: 1 1 auto; min-width: 0; color: var(--fig-ink); font-size: 0.9rem; line-height: 1.4; }
+.nw-paper .nw-dot { align-self: flex-start; margin-top: 0.34rem; }
+.nw-title { flex: 1 1 auto; min-width: 0; color: var(--fig-ink); font-size: 0.88rem; line-height: 1.4; }
 .nw-year { flex: none; font-family: var(--fig-display); font-weight: 600; color: var(--fig-ink); font-variant-numeric: tabular-nums; }
-.nw-kind { flex: none; width: 2.6rem; font-family: var(--fig-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fig-faint); }
-.nw-words { margin: 0.15rem 0 0 1.05rem; font-size: 0.82rem; color: var(--fig-muted); }
-.nw-note-small { margin: 0.5rem 0 0; font-size: 0.76rem; color: var(--fig-faint); }
-.nw-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.8rem 1.5rem; margin-top: 0.7rem; }
-.nw-col-k { margin: 0 0 0.4rem; }
-.nw-more { margin: 0.8rem 0 0; font-size: 0.86rem; color: var(--fig-muted); }
-.nw-mismatch { margin: 0.6rem 0 0; font-size: 0.84rem; color: var(--fig-warm); }
+.nw-kind { flex: none; width: 2.7rem; font-family: var(--fig-mono); font-size: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fig-faint); }
+.nw-words { margin: 0.1rem 0 0 1.05rem; font-size: 0.8rem; color: var(--fig-muted); }
 
 @media screen and (max-width: 768px) {
-  .nw-detail { padding: 0.8rem 0.75rem; }
-  .nw-detail-h { font-size: 1.12rem; }
-  .nw-kind { display: none; }
+  .nw-detail { position: relative; padding: 0.65rem 0.6rem 0.7rem 0.8rem; }
+  .nw-detail .nw-close { position: absolute; top: 0.55rem; right: 0.55rem; }
+  .nw-detail-h { font-size: 1.05rem; flex-basis: 100%; padding-right: 2.3rem; }
+  .nw-row { flex-direction: column; gap: 0.3rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .nw-e, .nw-h, .nw-pill, .nw-node, .nw-node rect { transition: none; }
+  .nw-wake .nw-node.is-q rect { animation: none; }
 }

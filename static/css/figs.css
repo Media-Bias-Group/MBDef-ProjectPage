@@ -1,5 +1,5 @@
-/* The interactive figures: the shared panel parts (static/js/figkit.js) on the dark stage. Each opens from its printed figure.
-   Every figure draws with these tokens, so the figures read as one system. The stage is dark in every option. */
+/* The interactive figures: the shared panel parts (static/js/figkit.js). Each opens from its printed figure on the
+   dark stage, and every figure draws with these tokens, so the six read as one system. */
 
 :root {
   --fig-panel: #111822;           /* a panel on the stage */
@@ -18,12 +18,12 @@
   --fig-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 }
 
-/* ---------------------------------------------------------------- lean on the project page
-   A panel opens from its printed figure, whose caption already says what it shows: the panel keeps its title, key
-   numbers, chart and what a click reveals; its longer notes stay out, and the method stays one click away. */
-.fig-live .fig-lead, .fig-live .fig-notes { display: none; }
-.fig-live .fig-head { margin-bottom: 1rem; }
-.fig-live .fig-method { margin-top: 1.25rem; padding-top: 0.9rem; border-top: 1px solid var(--fig-grid); }
+/* ---------------------------------------------------------------- on the stage
+   A panel opens from its printed figure, on the stage (mbdef.css): the stage's header names it and the printed
+   caption explains it, so the panel is just the chart, what a click reveals, and the method one click away. */
+.fig-stage .fig-panel { margin: 0; padding: 0.5rem 0 0; background: transparent; border: none; box-shadow: none; min-height: 16rem; }
+.fig-stage .fig-panel.is-loading::after { left: 0; top: 0.5rem; }
+.fig-stage .fig-method { margin-top: 1.25rem; padding-top: 0.9rem; border-top: 1px solid var(--fig-grid); }
 
 /* ---------------------------------------------------------------- a panel */
 .fig-panel {

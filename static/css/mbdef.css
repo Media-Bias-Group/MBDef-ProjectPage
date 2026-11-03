@@ -149,28 +149,63 @@ html, body { overflow-x: hidden; }
 }
 
 /* ---------------------------------------------------------------- printed figures that open into interactive ones */
-.fig-open-row { margin: 1rem 0 0; text-align: center; font-size: 1rem; }
-.button.fig-open {
-  font-size: 0.9rem !important;
-  color: var(--primary-color) !important; background: var(--background-primary) !important;
-  border: 2px solid var(--primary-color) !important; box-shadow: none;
+/* each printed figure is a button; a small pill under it says it opens (never over the figure's own content) */
+.fig-shot {
+  display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+  width: 100%; padding: 0; margin: 0;
+  border: 0; background: none; cursor: zoom-in; border-radius: var(--border-radius);
 }
-.button.fig-open:hover { color: #fff !important; background: var(--primary-color) !important; transform: translateY(-1px); }
-.button.fig-open[aria-expanded="true"] { color: #fff !important; background: var(--primary-color) !important; }
-.fig-live { margin: 1.5rem auto 0; scroll-margin-top: 8.5rem; } /* opened from a link: clear the fixed logo and buttons */
-.fig-live-bar {
-  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  margin: 0 0.25rem 0.5rem;
+.fig-shot img { display: block; width: 100%; height: auto; transition: filter 0.25s; }
+.fig-shot:hover img { filter: brightness(0.97); }
+.fig-shot:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 4px; }
+.fig-badge {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.2rem 0.65rem; border-radius: 999px;
+  font: 600 0.75rem/1.2 Inter, system-ui, sans-serif; color: var(--primary-color);
+  background: var(--background-accent); border: 1px solid rgba(82, 69, 234, 0.25);
+  transition: color 0.2s, background 0.2s, transform 0.2s; pointer-events: none;
 }
-.fig-live-k { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary-color); }
-.fig-close {
-  appearance: none; cursor: pointer; font: inherit; font-size: 0.85rem; font-weight: 600;
-  color: var(--text-secondary); background: transparent; border: 1px solid var(--border-color);
-  border-radius: 999px; padding: 0.25rem 0.8rem;
-  white-space: nowrap; flex: none;
+.fig-shot:hover .fig-badge, .fig-shot:focus-visible .fig-badge { color: #fff; background: var(--primary-color); transform: translateY(-1px); }
+
+/* the stage: the Explorer's dark ground, above the page; the page under it is dimmed and stays put */
+html.has-stage { overflow: hidden; }
+.fig-stage {
+  width: min(1240px, calc(100vw - 32px)); max-width: none; max-height: calc(100vh - 32px);
+  padding: 0; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 18px;
+  background: var(--stage-bg); color: var(--stage-ink); overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
 }
-.fig-close:hover { color: var(--text-primary); border-color: var(--primary-color); }
-.fig-live .fig-panel { margin: 0; }
+.fig-stage:focus { outline: none; }
+.fig-stage::backdrop { background: rgba(8, 10, 16, 0.72); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.fig-stage[open] .fig-stage-inner { animation: stageIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes stageIn { from { opacity: 0; transform: translateY(12px) scale(0.985); } to { opacity: 1; transform: none; } }
+.fig-stage-inner { display: flex; flex-direction: column; max-height: calc(100vh - 34px); }
+.fig-stage-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+  padding: 1.1rem 1.25rem 0.9rem 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: radial-gradient(ellipse 60% 120% at 0% 0%, rgba(82, 69, 234, 0.18), rgba(82, 69, 234, 0) 70%);
+}
+.fig-stage-text { min-width: 0; }
+.fig-stage-k { margin: 0 0 0.2rem; font: 500 0.72rem/1.3 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: #a59cff; }
+.fig-stage-title { margin: 0; font: 600 1.55rem/1.2 var(--font-display); color: #fff; text-wrap: balance; }
+.fig-stage-nav { display: flex; gap: 0.4rem; flex: none; }
+.fig-stage-btn {
+  appearance: none; cursor: pointer; width: 2.25rem; height: 2.25rem; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--stage-ink); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.fig-stage-btn:hover { background: rgba(165, 156, 255, 0.25); border-color: #a59cff; }
+.fig-stage-btn:focus-visible { outline: 2px solid #a59cff; outline-offset: 2px; }
+.fig-stage-body { position: relative; overflow: auto; overscroll-behavior: contain; overflow-anchor: none; padding: 0.75rem 1.5rem 1.5rem; } /* no anchoring: a figure opens at its top */
+.fig-stage .fig-panel { transition: opacity 0.4s ease; }
+.fig-stage .fig-panel.is-arriving { opacity: 0; }
+/* the printed figure on its way from the page to the stage (index.js, flyIn) */
+.fig-ghost {
+  position: fixed; z-index: 10; margin: 0; transform-origin: 0 0; border-radius: 10px;
+  background: #fff; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.45s ease;
+}
+.fig-ghost.is-gone { opacity: 0; }
 
 /* the carousel: the figures differ in height, so keep the slides even; the template's dots vanish on white */
 .results-carousel .item img { background: #fff; max-height: 430px; object-fit: contain; }
@@ -201,7 +236,12 @@ html, body { overflow-x: hidden; }
   .map-drag { display: none; }
   .stat-row { gap: 0.5rem; }
   .stat { padding: 0.8rem 0.3rem; }
-  .button.fig-open { width: auto !important; }
+  .fig-stage { width: 100vw; max-height: 100vh; height: 100vh; border-radius: 0; border: none; margin: 0; }
+  .fig-stage-inner { max-height: 100vh; height: 100%; }
+  .fig-stage-head { padding: 0.8rem 0.75rem 0.7rem 1rem; }
+  .fig-stage-title { font-size: 1.2rem; }
+  .fig-stage-btn { width: 2rem; height: 2rem; }
+  .fig-stage-body { padding: 0.5rem 1rem 1.5rem; flex: 1; }
 }
 
 @media screen and (max-width: 480px) {

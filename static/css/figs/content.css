@@ -1,20 +1,31 @@
-/* Fig. 3, interactive (static/js/figs/content.js): two bar charts drawn as HTML rows, and the detail line of a term. */
+/* Fig. 3, interactive (static/js/figs/content.js): two bar charts side by side as printed (stacked on a phone), drawn
+   as HTML rows, and the detail of a clicked term. */
 
-.ct-legend b { color: var(--fig-ink); font-weight: 600; }
-.ct-legend .ct-sw-s { background: var(--fig-seed); }
-.ct-legend .ct-sw-c { background: var(--fig-closure); }
-.ct-legend { margin-bottom: 1.25rem; }
-
-.ct-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.25rem; }
-.ct-grid.is-wide { grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); gap: 3rem; align-items: start; }
+.ct-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; }
+.ct-grid.is-wide { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3.5rem; align-items: start; }
+.ct-grid.is-wide .ct-left { align-self: stretch; } /* tall as the terms, so a term's detail can stay in view beside them */
 .ct-chart { min-width: 0; }
-.ct-h { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.6rem 1rem; margin-bottom: 0.9rem; }
-.ct-h > div { flex: 1 1 15rem; min-width: 0; }
+
+/* a chart's title, with the colour key (left) or the top-n switch (right) on the same line */
+.ct-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.35rem 1rem; min-height: 26px; margin-bottom: 0.7rem; }
 .ct-eye {
-  margin: 0; font-family: var(--fig-mono); font-size: 0.72rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--fig-ink);
+  margin: 0; font-family: var(--fig-mono); font-size: 11.5px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase;
+  line-height: 1.3; color: var(--fig-ink);
 }
-.ct-sub { margin: 0.2rem 0 0; font-size: 0.82rem; line-height: 1.4; color: var(--fig-muted); }
-.ct-chips { margin: 0; flex: none; }
+.ct-key { display: flex; gap: 0.9rem; margin: 0; font-size: 12px; color: var(--fig-muted); cursor: default; }
+.ct-key i, .ct-tsw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 0.4rem; }
+.ct-key i.s, .ct-tsw.s { background: var(--fig-seed); }
+.ct-key i.c, .ct-tsw.c { background: var(--fig-closure); }
+
+.ct-n { display: inline-flex; align-items: center; gap: 1px; font-family: var(--fig-mono); font-size: 11px; color: var(--fig-faint); }
+.ct-n span { margin-right: 0.3rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.ct-n button {
+  appearance: none; cursor: pointer; padding: 5px 8px; border: 0; border-radius: 999px; background: none;
+  font: inherit; line-height: 1; color: var(--fig-muted); font-variant-numeric: tabular-nums;
+}
+.ct-n button:hover { color: var(--fig-ink); background: rgba(255, 255, 255, 0.06); }
+.ct-n button[aria-pressed="true"] { color: #fff; background: rgba(165, 156, 255, 0.2); }
+.ct-n button:focus-visible { outline: 2px solid var(--fig-accent); outline-offset: 1px; }
 
 /* ---------------------------------------------------------------- the bars */
 .ct-plot { position: relative; }
@@ -23,7 +34,7 @@
 .ct-lines i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--fig-grid); }
 .ct-lines i.zero { background: var(--fig-line); }
 .ct-rows { position: relative; }
-.ct-row { position: relative; display: flex; align-items: center; height: var(--row); border-radius: 6px; }
+.ct-row { position: relative; display: flex; align-items: center; height: var(--row); border-radius: 6px; cursor: default; }
 .ct-row[role="button"] { cursor: pointer; }
 .ct-lab {
   flex: 0 0 calc(var(--x0) - 12px); margin-right: 12px; text-align: right;
@@ -31,13 +42,8 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ct-track { position: relative; flex: 1 1 auto; height: var(--bar); }
-.ct-bar {
-  position: absolute; left: 0; top: 0; bottom: 0; display: flex; border-radius: 3px;
-  clip-path: inset(-4px); transition: clip-path 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0ms), filter 0.15s;
-}
-.ct-s, .ct-c {
-  display: flex; align-items: center; justify-content: center; flex: none; height: 100%; overflow: hidden;
-}
+.ct-bar { position: absolute; left: 0; top: 0; bottom: 0; display: flex; border-radius: 3px; transition: filter 0.15s, opacity 0.2s; }
+.ct-s, .ct-c { display: flex; align-items: center; justify-content: center; flex: none; height: 100%; overflow: hidden; }
 .ct-s { background: var(--fig-seed); border-radius: 3px 0 0 3px; }
 .ct-c { background: var(--fig-closure); border-radius: 0 3px 3px 0; box-shadow: inset 1px 0 0 rgba(17, 24, 34, 0.55); }
 .ct-s em, .ct-c em {
@@ -45,18 +51,15 @@
 }
 .ct-val {
   position: absolute; top: 50%; transform: translateY(-50%); white-space: nowrap;
-  font-size: 12px; font-weight: 600; color: var(--fig-ink); font-variant-numeric: tabular-nums;
-  transition: opacity 0.5s ease 0.5s;
+  font-size: 12px; font-weight: 600; color: var(--fig-ink); font-variant-numeric: tabular-nums; transition: opacity 0.2s;
 }
 .ct-row:hover .ct-lab { color: #fff; }
 .ct-row:hover .ct-bar { filter: brightness(1.12); }
-.ct-row[aria-expanded="true"] .ct-lab { color: var(--fig-accent); font-weight: 600; }
-.ct-row[aria-expanded="true"] .ct-bar { box-shadow: 0 0 0 2px var(--fig-accent); }
-
-/* the one entrance: bars grow from the axis, numbers follow */
-.ct-pre .ct-bar { clip-path: inset(0 100% 0 0); }
-.ct-pre .ct-val, .ct-pre .ct-bar em { opacity: 0; }
-.ct-bar em { transition: opacity 0.4s ease 0.6s; }
+/* an open term: its bar ringed, the others quieter */
+.ct-rows.has-open .ct-row:not(.is-open) .ct-bar, .ct-rows.has-open .ct-row:not(.is-open) .ct-val { opacity: 0.45; }
+.ct-rows.has-open .ct-row:not(.is-open):hover .ct-bar, .ct-rows.has-open .ct-row:not(.is-open):hover .ct-val { opacity: 0.8; }
+.ct-row.is-open .ct-lab { color: var(--fig-accent); font-weight: 600; }
+.ct-row.is-open .ct-bar { box-shadow: 0 0 0 2px var(--fig-accent); }
 
 /* labels above the bars when the names need more than a third of the width */
 .is-stacked .ct-row { flex-direction: column; align-items: stretch; justify-content: flex-end; padding-bottom: 3px; }
@@ -71,44 +74,54 @@
 .ct-axt { margin: 2px 0 0; text-align: center; font-size: 12px; color: var(--fig-muted); }
 
 /* ---------------------------------------------------------------- the tooltip's parts */
-.ct-tsw { display: inline-block; width: 0.62rem; height: 0.62rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.05em; }
-.ct-tsw.s { background: var(--fig-seed); }
-.ct-tsw.c { background: var(--fig-closure); }
+.ct-tsw { width: 0.62rem; height: 0.62rem; vertical-align: -0.05em; }
 .ct-tmean { margin-top: 0.4rem; }
 .ct-tex { margin-top: 0.3rem; color: var(--fig-muted); font-size: 0.8rem; }
 .ct-tex i { color: var(--fig-ink); }
 
-/* ---------------------------------------------------------------- the detail line of a term */
+/* ---------------------------------------------------------------- the detail of a term */
+.ct-slot { position: sticky; top: 0.75rem; margin-top: 1.5rem; }
+.ct-slot:empty { margin: 0; }
 .ct-detail {
-  position: relative; z-index: 1; margin: 6px 0 12px; padding: 0.9rem 1rem 0.85rem 1.1rem;
+  position: relative; z-index: 1; padding: 0.7rem 0.85rem 0.8rem 1rem;
   background: var(--fig-panel-2); border: 1px solid var(--fig-line); border-left: 3px solid var(--fig-accent); border-radius: 10px;
+  animation: ctIn 0.2s ease-out;
 }
-.ct-dh { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
-.ct-dname { margin: 0.1rem 0 0; font-family: var(--fig-display); font-weight: 600; font-size: 1.4rem; line-height: 1.2; color: #fff; }
+.ct-rows .ct-detail { margin: 4px 0 10px; }
+@keyframes ctIn { from { opacity: 0; transform: translateY(-4px); } }
+.ct-dh { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.ct-dname { margin: 0; font-family: var(--fig-display); font-weight: 600; font-size: 1.2rem; line-height: 1.2; color: #fff; }
+.ct-dname small { margin-left: 0.5rem; font-family: var(--fig-mono); font-size: 11px; font-weight: 500; color: var(--fig-muted); }
 .ct-close {
-  appearance: none; flex: none; width: 2rem; height: 2rem; border-radius: 999px; cursor: pointer;
-  background: transparent; border: 1px solid var(--fig-line); color: var(--fig-muted); font: inherit; font-size: 1.15rem; line-height: 1;
+  appearance: none; flex: none; width: 1.75rem; height: 1.75rem; border-radius: 999px; cursor: pointer;
+  background: transparent; border: 1px solid var(--fig-line); color: var(--fig-muted); font: inherit; font-size: 1.05rem; line-height: 1;
 }
 .ct-close:hover { color: #fff; border-color: var(--fig-accent); }
-.ct-close:focus-visible { outline: 2px solid var(--fig-accent); outline-offset: 2px; }
-.ct-dl { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 0.6rem 1rem; margin: 0.8rem 0 0; }
+.ct-close:focus-visible, .ct-more:focus-visible { outline: 2px solid var(--fig-accent); outline-offset: 2px; }
+.ct-dl { display: grid; grid-template-columns: 5.6rem minmax(0, 1fr); gap: 0.4rem 0.8rem; margin: 0.55rem 0 0; }
 .ct-dl dt {
-  padding-top: 0.2rem; font-family: var(--fig-mono); font-size: 0.68rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--fig-muted);
+  padding-top: 0.15rem; font-family: var(--fig-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fig-faint);
 }
-.ct-dl dd { margin: 0; min-width: 0; font-size: 0.88rem; line-height: 1.5; color: var(--fig-ink); }
+.ct-dl dt[title] { cursor: help; }
+.ct-dl dd { margin: 0; min-width: 0; font-size: 0.86rem; line-height: 1.45; color: var(--fig-ink); font-variant-numeric: tabular-nums; }
 .ct-dl dd b { color: #fff; }
-.ct-spell > span { display: inline-block; margin: 0 0.75rem 0.1rem 0; white-space: nowrap; }
-.ct-spell q { quotes: '“' '”'; }
-.ct-spell small { color: var(--fig-muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.ct-spell > span { display: inline-block; margin: 0 0.7rem 0.05rem 0; white-space: nowrap; }
+.ct-spell small { margin-left: 0.3rem; color: var(--fig-muted); font-size: 11px; }
+.ct-more {
+  appearance: none; cursor: pointer; padding: 1px 7px; border: 1px solid var(--fig-line); border-radius: 999px; background: none;
+  font: inherit; font-size: 11px; color: var(--fig-muted);
+}
+.ct-more:hover { color: #fff; border-color: var(--fig-accent); }
+.ct-yr { display: block; }
+.ct-years .ct-hist { margin: 0.3rem 0 0.1rem; }
 .ct-detail blockquote {
   margin: 0; padding: 0; border: 0; background: none;
-  font-family: var(--fig-display); font-size: 1.05rem; line-height: 1.45; color: #fff;
+  font-family: var(--fig-display); font-size: 1rem; line-height: 1.4; color: #fff;
 }
-.ct-note { margin: 0.25rem 0 0; font-size: 0.8rem; line-height: 1.45; color: var(--fig-muted); }
-span.ct-note { margin: 0; }
-.ct-go { margin: 0.85rem 0 0; font-size: 0.85rem; }
+.ct-src { margin: 0.25rem 0 0; font-size: 12px; line-height: 1.45; color: var(--fig-muted); }
+.ct-src .fig-link { font-size: 12px; white-space: nowrap; }
 
-.ct-hist { display: block; max-width: 100%; overflow: visible; margin-top: 0.15rem; }
+.ct-hist { display: block; max-width: 100%; overflow: visible; }
 .ct-hist rect.hit { fill: transparent; }
 .ct-hist rect.s { fill: var(--fig-seed); }
 .ct-hist rect.c { fill: var(--fig-closure); }
@@ -116,17 +129,14 @@ span.ct-note { margin: 0; }
 .ct-hist line.base { stroke: var(--fig-line); }
 .fig-body .ct-hist text { font-size: 11px; fill: var(--fig-muted); }
 
-.ct-diff { margin: 1rem 0 0; font-size: 0.85rem; color: var(--fig-warm); }
+.ct-diff { margin: 1rem 0 0; font-size: 12px; color: var(--fig-warm); }
 
 @media screen and (max-width: 560px) {
-  .ct-dl { grid-template-columns: minmax(0, 1fr); gap: 0.2rem; }
-  .ct-dl dt { padding-top: 0.5rem; }
-}
-/* three head numbers side by side need a smaller size on a phone (the shared size overlaps them at 390 px) */
-@media screen and (max-width: 480px) {
-  .fig-panel[data-fig="content"] .fig-stats { gap: 1rem; }
-  .fig-panel[data-fig="content"] .fig-stat b { font-size: 1.45rem; }
+  .ct-dl { grid-template-columns: minmax(0, 1fr); gap: 0.15rem; }
+  .ct-dl dt { padding-top: 0.4rem; }
+  .ct-dl dt:first-child { padding-top: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ct-bar, .ct-val, .ct-bar em { transition: none; }
+  .ct-detail { animation: none; }
+  .ct-bar, .ct-val { transition: none; }
 }

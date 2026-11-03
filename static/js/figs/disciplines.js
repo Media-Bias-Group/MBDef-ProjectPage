@@ -1,283 +1,303 @@
 /* The interactive Fig. 2: which research fields the 6,115 papers come from (data: static/data/figs/disciplines.json,
    made by scripts/figs/disciplines.py).
 
-   One row per field, as printed: a stacked bar (seed papers grey, cited papers blue) on one shared scale, the total
-   and its share on the right. Hover or focus a row for its numbers; click (or Enter) opens the field in place: its
-   subfields, each as a share of the field, and the papers with the most definitions. A click on a subfield narrows
-   the paper list to it. The bars and the Social Sciences subfields carry the printed counts; everything else in an
-   opened field comes from a fresh OpenAlex lookup and says so. */
+   As printed: one column per field on one scale, seed papers grey under cited papers blue, the total (and its two
+   parts, where they do not fit inside) on top, and the Social Sciences subfields in an inset tied to their column by
+   dashed lines. A click on another column shows its subfields in the inset; a second click closes it. The inset's
+   Papers button, or a click on a subfield, lists the papers with the most definitions under the chart; a second
+   click, the list's × or Esc closes it. On a narrow screen the columns become rows, in the same order, and a field
+   opens in place. † marks a count that today's OpenAlex lookup gives differently; the numbers are in the tooltip and
+   in "How this is made". */
 (function () {
   'use strict';
 
+  var YMAX = 4000, WIDE = 900, PH = 400; // the printed axis; the narrowest chart drawn as columns; the plot's height
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function day(iso) { var p = iso.split('-'); return +p[2] + ' ' + MONTHS[+p[1] - 1] + ' ' + p[0]; }
   function sum(n) { return n[0] + n[1]; }
-  function words(n) { return ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][n] || String(n); }
-  function niceMax(v) { var step = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v / step) * step; }
+  function same(a, b) { return !a || (a[0] === b[0] && a[1] === b[1]); }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function niceStep(v) { // 1, 2, 2.5 or 5 × 10^k, at least v
+    var p = Math.pow(10, Math.floor(Math.log10(v))), m = v / p;
+    return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+  }
 
   FIG.register('disciplines', {
     build: function (panel, data, k) {
       var el = k.el, nf = k.nf, pct = k.pct;
-      function share(a, b) { return pct(a, b, a / b < 0.1 ? 1 : 0); }   // 49%, 6.2%, 0.3%
-      var N = data.total, NS = data.seeds, NC = data.cited, F = data.fields, L = data.lookup;
-      var social = F[0], cs = F[1];
-      var when = day(L.to);
-      var OTHER = 'Other classified fields', UNCL = 'Unclassified';
-
-      // ---------------------------------------------------------------- head
-      k.head({
-        fig: 'Fig. 2',
-        title: 'Which research fields do the 6,115 papers come from?',
-        lead: 'Mostly the social sciences: <b>' + nf(sum(social.n)) + ' of the ' + nf(N) + ' papers (' + pct(sum(social.n), N) +
-          ')</b>, each counted once under the field OpenAlex gives it. Computer science follows with ' + nf(sum(cs.n)) +
-          ' (' + pct(sum(cs.n), N) + ').',
-        stats: [
-          { value: pct(sum(social.n), N), label: 'social sciences' },
-          { value: pct(sum(cs.n), N), label: 'computer science' }
-        ]
-      });
-
-      // ---------------------------------------------------------------- the chart
+      var N = data.total, F = data.fields, when = day(data.lookup.to);
+      var UNCL = 'Unclassified', OTHER = 'Other classified fields';
       var body = k.body();
       body.classList.add('dsc');
-      body.appendChild(el('div', { class: 'fig-legend dsc-legend' },
-        el('span', null, el('i', { style: 'background:var(--fig-seed)' }), el('b', { text: 'Seed papers' }), ' found by the keyword search (' + nf(NS) + ')'),
-        el('span', null, el('i', { style: 'background:var(--fig-closure)' }), el('b', { text: 'Cited papers' }), ' added through the seed papers’ citations (' + nf(NC) + ')'),
-        el('span', { class: 'dsc-hint', text: 'Click a field to open its subfields and papers' })));
 
-      var max = niceMax(Math.max.apply(null, F.map(function (f) { return sum(f.n); })));
-      var chart = el('div', { class: 'dsc-chart' });
-      body.appendChild(chart);
-      var axis = el('div', { class: 'dsc-axis', 'aria-hidden': 'true' }, el('span', { class: 'dsc-axis-pad' }), el('span', { class: 'dsc-ticks' }), el('span', { class: 'dsc-axis-lab', text: 'papers' }));
-      chart.appendChild(axis);
+      var open = 0;      // the field shown in the inset: Social Sciences, as printed (-1: none)
+      var list = null;   // the papers listed: null, 'f' (the open field) or a subfield's index
+      var W = 0, entered = false, cols = null;
 
-      var rows = [], open = -1;
-      F.forEach(function (f, i) {
-        var t = sum(f.n);
-        var segS = el('i', { class: 'dsc-s', style: 'width:' + (100 * f.n[0] / t) + '%' }, el('span', { text: nf(f.n[0]) }));
-        var segC = el('i', { class: 'dsc-c', style: 'width:' + (100 * f.n[1] / t) + '%' }, el('span', { text: nf(f.n[1]) }));
-        var bar = el('span', { class: 'dsc-bar', style: 'width:' + (100 * t / max) + '%;--i:' + i }, segS, segC);
-        var name = f.name === UNCL ? el('span', { class: 'dsc-name' }, 'Unclassified', el('small', { text: 'no field in OpenAlex' })) : el('span', { class: 'dsc-name', text: f.name });
-        var btn = el('button', {
-          type: 'button', class: 'dsc-btn', 'aria-expanded': 'false', 'aria-controls': 'dsc-detail-' + i,
-          'aria-label': f.name + ': ' + nf(t) + ' papers, ' + pct(t, N) + ' of all; ' + nf(f.n[0]) + ' seed, ' + nf(f.n[1]) + ' cited.'
-        },
-          name,
-          el('span', { class: 'dsc-track' }, bar),
-          el('span', { class: 'dsc-val' }, el('b', { text: nf(t) }), el('span', { text: pct(t, N) })));
-        var detail = el('div', { class: 'dsc-detail', id: 'dsc-detail-' + i, hidden: true });
-        var row = el('div', { class: 'dsc-row' + (f.name === UNCL ? ' is-uncl' : f.name === OTHER ? ' is-other' : '') }, btn, detail);
-        chart.appendChild(row);
-        rows.push({ f: f, row: row, btn: btn, detail: detail, segs: [[segS, f.n[0]], [segC, f.n[1]]], t: t, built: false });
-
-        btn.addEventListener('mouseenter', function (e) { k.tip.show(e, fieldTip(f)); });
-        btn.addEventListener('mousemove', function (e) { k.tip.show(e, fieldTip(f)); });
-        btn.addEventListener('mouseleave', k.tip.hide);
-        btn.addEventListener('focus', function (e) { if (btn.matches(':focus-visible')) k.tip.show(e, fieldTip(f)); });
-        btn.addEventListener('blur', k.tip.hide);
-        btn.addEventListener('click', function () { k.tip.hide(); toggle(i); });
-      });
-
-      // the fresh lookup against the print, said once under the chart
-      var up = [], down = null;
-      F.forEach(function (f) {
-        var d = sum(f.today) - sum(f.n);
-        if (f.name === UNCL) down = d; else if (d > 0) up.push([f.name, d]);
-      });
-      var driftText = L.same_as_print
-        ? 'Asked again on ' + when + ', OpenAlex gives every count printed here.'
-        : 'Asked again on ' + when + ', OpenAlex classifies ' + nf(-down) + ' more papers (' + nf(sum(F[F.length - 1].today)) +
-          ' unclassified instead of ' + nf(sum(F[F.length - 1].n)) + '): ' + driftList(up) + '; the other bars are unchanged.';
-      body.appendChild(el('p', { class: 'dsc-note' },
-        el('b', { text: 'Bars as printed in the paper. ' }), driftText,
-        ' Subfields of the other fields and the papers listed come from that lookup.'));
-
-      function driftList(list) {
-        var groups = {};
-        list.forEach(function (x) { (groups[x[1]] = groups[x[1]] || []).push(x[0]); });
-        return Object.keys(groups).map(Number).sort(function (a, b) { return b - a; }).map(function (d) {
-          var names = groups[d];
-          var who = names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
-          return who + ' +' + nf(d) + (names.length > 1 ? ' each' : '');
-        }).join(', ');
+      function share(a, b) { return pct(a, b, a / b < 0.1 ? 1 : 0); }   // 49%, 6.2%
+      function sw(c) { return '<i class="dsc-sw ' + c + '"></i>'; }
+      function dagger(on) { return on ? el('sup', { class: 'dsc-dg', text: '†' }) : null; }
+      function todayLine(n, today) {
+        return same(today, n) ? '' : '<br><span class="k">† OpenAlex today: ' + nf(sum(today)) + ' (' + nf(today[0]) + ' seed, ' + nf(today[1]) + ' cited)</span>';
+      }
+      function hover(node, html) {
+        var show = function (e) { k.tip.show(e, html()); };
+        node.addEventListener('mouseenter', show);
+        node.addEventListener('mousemove', show);
+        node.addEventListener('mouseleave', k.tip.hide);
+        node.addEventListener('focus', function (e) { if (node.matches(':focus-visible')) show(e); });
+        node.addEventListener('blur', k.tip.hide);
       }
 
       // ---------------------------------------------------------------- tooltips
-      function sw(c) { return '<i class="dsc-sw" style="background:var(' + c + ')"></i>'; }
       function fieldTip(f) {
         var t = sum(f.n);
         return '<b>' + f.name + '</b><br>' + nf(t) + ' papers · ' + pct(t, N) + ' of all ' + nf(N) + '<br>' +
-          sw('--fig-seed') + nf(f.n[0]) + ' seed · <span class="k">' + pct(f.n[0], NS) + ' of all seed papers</span><br>' +
-          sw('--fig-closure') + nf(f.n[1]) + ' cited · <span class="k">' + pct(f.n[1], NC) + ' of all cited papers</span>' +
-          (f.name === UNCL ? '<br><span class="k">Not a field: OpenAlex gave these papers no topic.</span>' : '') +
-          '<br><span class="k">' + (open >= 0 && rows[open].f === f ? 'Click to close' : 'Click to open its ' + (f.name === UNCL ? 'reasons' : f.name === OTHER ? 'fields and papers' : 'subfields and papers')) + '</span>';
+          sw('s') + nf(f.n[0]) + ' seed · ' + sw('c') + nf(f.n[1]) + ' cited' +
+          (f.parts ? '<br><span class="k">' + f.parts.map(function (p) { return p[0] + ' ' + nf(p[1]); }).join(' + ') + '</span>' : '') +
+          (f.name === UNCL ? '<br><span class="k">No field in OpenAlex</span>' : '') + todayLine(f.n, f.today);
       }
-      function subTip(s, whole, parent, today) {
+      function subTip(f, s, whole) {
         var t = sum(s.n);
-        return '<b>' + s.name + '</b> <span class="k">(' + parent + ')</span><br>' + nf(t) + ' papers · ' + pct(t, whole) + ' of the ' + nf(whole) + '<br>' +
-          sw('--fig-seed') + nf(s.n[0]) + ' seed · ' + sw('--fig-closure') + nf(s.n[1]) + ' cited' +
-          (s.members ? '<br><span class="k">' + s.members + ' smaller ' + (parent === OTHER ? 'fields' : 'subfields') + ' together</span>' : '') +
-          '<br><span class="k">' + (today ? 'OpenAlex, ' + when : 'As printed in the paper') + '</span>';
+        return '<b>' + cap(s.name) + '</b><br>' + nf(t) + ' papers · ' + share(t, whole) + ' of ' + (f.name === UNCL ? 'the ' + nf(whole) + ' unclassified' : f.name) + '<br>' +
+          sw('s') + nf(s.n[0]) + ' seed · ' + sw('c') + nf(s.n[1]) + ' cited' +
+          (s.members ? '<br><span class="k">' + s.members + ' smaller ' + (f.name === OTHER ? 'fields' : 'subfields') + '</span>' : '') +
+          todayLine(s.n, s.today);
       }
 
-      // ---------------------------------------------------------------- open a field in place
-      function toggle(i) {
-        if (open >= 0) { rows[open].detail.hidden = true; rows[open].btn.setAttribute('aria-expanded', 'false'); rows[open].row.classList.remove('is-open'); }
-        if (open === i) { open = -1; return; }
-        var r = rows[i];
-        if (!r.built) { fillDetail(r); r.built = true; }
-        r.detail.hidden = false; r.btn.setAttribute('aria-expanded', 'true'); r.row.classList.add('is-open');
-        open = i;
+      // ---------------------------------------------------------------- one stacked bar: seed, then cited
+      function bar(cls, n, f) {
+        var t = Math.max(sum(n), 1), axis = cls === 'dsc-v' ? 'height' : 'width';
+        return el('span', { class: cls, style: '--f:' + f, 'data-n': n.join(',') },
+          el('i', { class: 'dsc-s', style: axis + ':' + (100 * n[0] / t) + '%' }, el('span', { class: 'dsc-in', text: nf(n[0]) })),
+          el('i', { class: 'dsc-c', style: axis + ':' + (100 * n[1] / t) + '%' }, el('span', { class: 'dsc-in', text: nf(n[1]) })));
+      }
+      // its numbers: the total, and the two parts unless they show inside the bar (as printed)
+      function count(cls, n, drift) {
+        return el('span', { class: cls }, el('b', null, nf(sum(n)), dagger(drift)),
+          el('span', { class: 'dsc-pair', text: '(' + nf(n[0]) + ', ' + nf(n[1]) + ')' }));
       }
 
-      function fillDetail(r) {
-        var f = r.f, d = r.detail, printed = !!f.printed_inset;
-        if (f.name === UNCL) return fillUnclassified(r);
+      // ---------------------------------------------------------------- a field's subfields (the inset, or a row opened in place)
+      function detail(f, wide) {
+        var printed = !!f.printed_inset, uncl = f.name === UNCL, items = uncl ? f.reasons : f.subfields;
         var whole = printed ? sum(f.n) : sum(f.today);
-        var kind = f.name === OTHER ? 'fields' : 'subfields';
-        var src = printed ? 'as printed in the paper' : 'OpenAlex, ' + when;
-        var cap = 'Each bar is a share of the ' + nf(whole) + ' papers' + (printed ? '' : ' OpenAlex puts in this ' + (f.name === OTHER ? 'bar' : 'field') + ' today') + '.';
-        if (!printed && whole !== sum(f.n)) cap += ' The paper’s lookup counted ' + nf(sum(f.n)) + '.';
-        if (f.parts) cap += ' ' + f.parts.map(function (p) { return p[0] + ' (' + nf(p[1]) + ')'; }).join(' and ') + ' are drawn as one bar, as in the paper.';
+        var top = Math.max.apply(null, items.map(function (s) { return sum(s.n); }));
+        var step = niceStep(top / 3), smax = Math.ceil(top / step) * step;
 
-        var list = el('ol', { class: 'dsc-papers' });
-        var listName = el('span');
-        var listHead = el('p', { class: 'dsc-k' }, listName, el('span', { class: 'dsc-src is-today', text: 'OpenAlex, ' + when }));
-        var reset = el('button', { type: 'button', class: 'dsc-reset', hidden: true, text: '← All of ' + f.name });
-        var subs = [], sel = -1;
-        function showPapers(items, where) {
-          listName.textContent = where ? 'Top papers in ' + where : 'Papers with the most definitions';
-          list.textContent = '';
-          items.forEach(function (p) {
-            list.appendChild(el('li', null,
-              el('i', { class: 'dsc-dot', style: 'background:var(' + (p.c === 's' ? '--fig-seed' : '--fig-closure') + ')', title: p.c === 's' ? 'seed paper' : 'cited paper' }),
-              el('span', { class: 'dsc-ptitle', text: p.t }),
-              el('span', { class: 'dsc-pmeta', text: (p.y ? p.y + ' · ' : '') + (p.c === 's' ? 'seed' : 'cited') + ' paper · ' + nf(p.d) + ' definitions' })));
-          });
-          if (!items.length) list.appendChild(el('li', { class: 'dsc-none', text: 'None of its papers has a title that OpenAlex confirms.' }));
-        }
-        function pick(j) {
-          sel = sel === j ? -1 : j;
-          subs.forEach(function (b, m) { b.setAttribute('aria-pressed', m === sel ? 'true' : 'false'); });
-          reset.hidden = sel < 0;
-          if (sel < 0) showPapers(f.papers); else showPapers(f.subfields[sel].papers, f.subfields[sel].name);
-        }
-        reset.addEventListener('click', function () { pick(sel); });
+        var papersBtn = uncl ? null : el('button', {
+          type: 'button', class: 'dsc-pbtn', 'data-k': 'papers', 'aria-pressed': list === 'f' ? 'true' : 'false',
+          title: 'Papers with the most definitions', text: 'Papers',
+          onclick: function () { setList(list === 'f' ? null : 'f'); }
+        });
+        var head = el('div', { class: 'dsc-ih' },
+          wide ? el('span', { class: 'dsc-it', text: f.name }) : null,
+          printed ? null : el('span', { class: 'dsc-src', title: 'From a fresh OpenAlex lookup, not the paper', text: 'OpenAlex · ' + when }),
+          papersBtn);
 
-        var subWrap = el('div', { class: 'dsc-subs', role: 'group', 'aria-label': (kind === 'fields' ? 'Fields in ' : 'Subfields of ') + f.name });
-        f.subfields.forEach(function (s, j) {
-          var t = sum(s.n);
-          var b = el('button', {
-            type: 'button', class: 'dsc-sub', 'aria-pressed': 'false',
-            'aria-label': s.name + ': ' + nf(t) + ' papers, ' + pct(t, whole) + ' of the field; ' + nf(s.n[0]) + ' seed, ' + nf(s.n[1]) + ' cited. Show its papers.'
+        var rows = el('div', { class: 'dsc-subs', role: 'group', 'aria-label': (uncl ? 'Why ' : 'Subfields of ') + f.name + (uncl ? ' papers have no field' : '') });
+        items.forEach(function (s, j) {
+          var name = cap(s.name), t = sum(s.n), drift = !same(s.today, s.n);
+          var label = name + ': ' + nf(t) + ' papers, ' + nf(s.n[0]) + ' seed, ' + nf(s.n[1]) + ' cited.';
+          var row = uncl
+            ? el('div', { class: 'dsc-sub is-static', tabindex: '0', 'data-k': 's' + j, role: 'img', 'aria-label': label })
+            : el('button', {
+              type: 'button', class: 'dsc-sub', 'data-k': 's' + j, 'aria-pressed': list === j ? 'true' : 'false', 'aria-label': label + ' Its papers.',
+              onclick: function () { setList(list === j ? null : j); }
+            });
+          row.appendChild(el('span', { class: 'dsc-sname', text: name }));
+          row.appendChild(el('span', { class: 'dsc-track' }, bar('dsc-h', s.n, t / smax), count('dsc-end', s.n, drift)));
+          hover(row, function () { return subTip(f, s, whole); });
+          rows.appendChild(row);
+        });
+
+        var ticks = null;
+        if (wide) {
+          ticks = el('div', { class: 'dsc-iax', 'aria-hidden': 'true' }, el('span'), el('span', { class: 'dsc-iticks' }));
+          for (var v = 0; v <= smax + 1e-9; v += step) {
+            ticks.lastChild.appendChild(el('span', { style: 'left:calc((100% - var(--rsv)) * ' + (v / smax) + ')', text: nf(v) }));
+          }
+        }
+        return el('div', { class: wide ? 'dsc-inset' : 'dsc-open', id: 'dsc-inset' }, head, rows, ticks, wide ? null : papers());
+      }
+
+      // ---------------------------------------------------------------- the papers with the most definitions
+      function papers() {
+        if (list == null || open < 0) return null;
+        var f = F[open], sub = typeof list === 'number' ? f.subfields[list] : null, items = (sub || f).papers;
+        return el('section', { class: 'dsc-pp', 'aria-label': 'Papers with the most definitions in ' + (sub || f).name },
+          el('div', { class: 'dsc-pph' },
+            el('p', { class: 'dsc-ppt' }, el('b', { text: (sub || f).name }), 'papers with the most definitions'),
+            el('button', {
+              type: 'button', class: 'dsc-x', 'data-k': 'x', 'aria-label': 'Close the list', title: 'Close (Esc)', text: '×',
+              onclick: function () { setList(null); }
+            })),
+          el('ol', { class: 'dsc-pl' }, items.map(function (p) {
+            var kind = p.c === 's' ? 'seed' : 'cited';
+            return el('li', null,
+              el('i', { class: 'dsc-dot ' + p.c, title: kind + ' paper' }),
+              el('span', { class: 'dsc-pt', title: p.t, text: p.t }),
+              el('span', { class: 'dsc-pm', text: (p.y ? p.y + ' · ' : '') + kind + ' · ' + nf(p.d) + ' definitions' }));
+          })));
+      }
+
+      var key = el('p', { class: 'dsc-key' },
+        el('span', null, el('i', { class: 's' }), 'Seed papers'),
+        el('span', null, el('i', { class: 'c' }), 'Cited papers'));
+
+      // ---------------------------------------------------------------- wide: the printed columns and the inset
+      function drawColumns() {
+        cols = el('div', { class: 'dsc-cols', style: '--ph:' + PH + 'px' });
+        var yax = el('div', { class: 'dsc-yax', 'aria-hidden': 'true' }, el('span', { class: 'dsc-ytitle', text: 'Number of papers' }));
+        var grid = el('div', { class: 'dsc-grid', 'aria-hidden': 'true' });
+        for (var v = 0; v <= YMAX; v += 1000) {
+          yax.appendChild(el('span', { class: 'dsc-ytick', style: 'bottom:' + (100 * v / YMAX) + '%', text: nf(v) }));
+          if (v) grid.appendChild(el('i', { style: 'bottom:' + (100 * v / YMAX) + '%' }));
+        }
+        cols.appendChild(yax);
+        cols.appendChild(grid);
+        F.forEach(function (f, i) {
+          var t = sum(f.n);
+          var col = el('button', {
+            type: 'button', class: 'dsc-col' + (open === i ? ' is-open' : ''), style: '--i:' + i + ';grid-column:' + (i + 2), 'data-k': 'f' + i,
+            'aria-expanded': open === i ? 'true' : 'false', 'aria-controls': 'dsc-inset',
+            'aria-label': f.name + ': ' + nf(t) + ' papers, ' + nf(f.n[0]) + ' seed, ' + nf(f.n[1]) + ' cited.'
           },
-            el('span', { class: 'dsc-name', text: s.name }),
-            el('span', { class: 'dsc-track' }, el('span', { class: 'dsc-bar', style: 'width:' + (100 * t / whole) + '%' },
-              el('i', { class: 'dsc-s', style: 'width:' + (100 * s.n[0] / Math.max(t, 1)) + '%' }),
-              el('i', { class: 'dsc-c', style: 'width:' + (100 * s.n[1] / Math.max(t, 1)) + '%' }))),
-            el('span', { class: 'dsc-val' }, el('b', { text: nf(t) }), el('span', { text: share(t, whole) })));
-          var tipFn = function (e) { k.tip.show(e, subTip(s, whole, f.name, !printed)); };
-          b.addEventListener('mouseenter', tipFn); b.addEventListener('mousemove', tipFn);
-          b.addEventListener('mouseleave', k.tip.hide); b.addEventListener('blur', k.tip.hide);
-          b.addEventListener('focus', function (e) { if (b.matches(':focus-visible')) tipFn(e); });
-          b.addEventListener('click', function () { k.tip.hide(); pick(j); });
-          subs.push(b); subWrap.appendChild(b);
+            el('span', { class: 'dsc-cell' }, count('dsc-top', f.n, !same(f.today, f.n)), bar('dsc-v', f.n, t / YMAX)),
+            el('span', { class: 'dsc-name', text: f.name }));
+          col.addEventListener('click', function () { setOpen(open === i ? -1 : i); });
+          hover(col, function () { return fieldTip(f); });
+          cols.appendChild(col);
         });
-
-        showPapers(f.papers);
-        d.appendChild(el('div', { class: 'dsc-detail-in' },
-          el('div', { class: 'dsc-col' },
-            el('p', { class: 'dsc-k' }, (kind === 'fields' ? 'The fields in this bar' : 'Subfields of ' + f.name), el('span', { class: 'dsc-src' + (printed ? '' : ' is-today'), text: src })),
-            el('p', { class: 'dsc-cap', text: cap }),
-            subWrap),
-          el('div', { class: 'dsc-col' },
-            el('div', { class: 'dsc-phead' }, listHead, reset),
-            el('p', { class: 'dsc-cap' }, 'Picked by the number of definitions MBDef holds from each, among the papers whose title OpenAlex confirms.'),
-            list,
-            el('a', { class: 'fig-link', href: k.explorer('papers'), target: '_blank', rel: 'noopener', text: 'Search a title in the Explorer’s Papers tab →' }))));
+        cols.appendChild(key);
+        if (open >= 0) {
+          cols.appendChild(detail(F[open], true));
+          cols.appendChild(k.svg('svg', { class: 'dsc-lead', 'aria-hidden': 'true' }));
+        }
+        body.appendChild(cols);
       }
 
-      function fillUnclassified(r) {
-        var f = r.f, whole = sum(f.today);
-        var wrap = el('div', { class: 'dsc-subs is-static' });
-        f.reasons.forEach(function (s) {
-          var t = sum(s.n);
-          var tip = function (e) { k.tip.show(e, '<b>' + s.name.charAt(0).toUpperCase() + s.name.slice(1) + '</b><br>' + nf(t) + ' papers \u00b7 ' + share(t, whole) + ' of the ' + nf(whole) + '<br>' + sw('--fig-seed') + nf(s.n[0]) + ' seed \u00b7 ' + sw('--fig-closure') + nf(s.n[1]) + ' cited<br><span class="k">OpenAlex, ' + when + '</span>'); };
-          var item = el('div', { class: 'dsc-sub', tabindex: '0', role: 'img', 'aria-label': s.name + ': ' + nf(t) + ' papers, ' + nf(s.n[0]) + ' seed, ' + nf(s.n[1]) + ' cited.', onmouseenter: tip, onmousemove: tip, onmouseleave: k.tip.hide, onfocus: tip, onblur: k.tip.hide },
-            el('span', { class: 'dsc-name', text: s.name.charAt(0).toUpperCase() + s.name.slice(1) }),
-            el('span', { class: 'dsc-track' }, el('span', { class: 'dsc-bar', style: 'width:' + (100 * t / whole) + '%' },
-              el('i', { class: 'dsc-s', style: 'width:' + (100 * s.n[0] / t) + '%' }),
-              el('i', { class: 'dsc-c', style: 'width:' + (100 * s.n[1] / t) + '%' }))),
-            el('span', { class: 'dsc-val' }, el('b', { text: nf(t) }), el('span', { text: share(t, whole) })));
-          wrap.appendChild(item);
-        });
-        r.detail.appendChild(el('div', { class: 'dsc-detail-in' },
-          el('div', { class: 'dsc-col' },
-            el('p', { class: 'dsc-k' }, 'Why a paper has no field', el('span', { class: 'dsc-src is-today', text: 'OpenAlex, ' + when })),
-            el('p', { class: 'dsc-cap', text: 'Each bar is a share of the ' + nf(whole) + ' papers OpenAlex leaves unclassified today; the paper’s lookup left ' + nf(sum(f.n)) + '.' }),
-            wrap),
-          el('div', { class: 'dsc-col' },
-            el('p', { class: 'dsc-k', text: 'What this bar is' }),
-            el('p', { class: 'dsc-text', html: 'These papers are in MBDef like any other; they only lack a field here. Most are seed papers for which MBDef has neither an OpenAlex id nor a DOI, so there is nothing to look up. No field is guessed from a title.' }),
-            el('p', { class: 'dsc-text', html: 'Seed papers are ' + pct(f.n[0], NS) + ' unclassified, cited papers ' + pct(f.n[1], NC) + ' (as printed).' }))));
-      }
-
-      // ---------------------------------------------------------------- width: layout, ticks, labels inside the segments
-      k.onResize(function (w) {
-        var narrow = w < 600;
-        chart.classList.toggle('is-narrow', narrow);
-        body.classList.toggle('is-narrow', narrow);
-        var step = narrow ? max / 2 : max / 4;
-        chart.style.setProperty('--dsc-grid', (100 * step / max) + '%');
-        var ticks = axis.querySelector('.dsc-ticks');
-        ticks.textContent = '';
-        for (var v = 0; v <= max + 1e-9; v += step) ticks.appendChild(el('span', { style: 'left:' + (100 * v / max) + '%', text: nf(v) }));
-        var trackW = rows[0].btn.querySelector('.dsc-track').getBoundingClientRect().width;
-        rows.forEach(function (r) {
-          r.segs.forEach(function (s) {
-            var px = trackW * s[1] / max;
-            s[0].classList.toggle('fits', px >= String(nf(s[1])).length * 7.5 + 14);
+      // after layout: the parts inside the bars where they fit, the inset clear of the columns, the dashed lines
+      function fit() {
+        body.querySelectorAll('[data-n]').forEach(function (b) {
+          var n = b.dataset.n.split(',').map(Number), t = Math.max(sum(n), 1), v = b.classList.contains('dsc-v');
+          var w = b.offsetWidth, h = b.offsetHeight;   // offset sizes: the entrance scales the bars
+          var ok = n.every(function (x) {
+            var need = nf(x).length * 7.4 + 10;
+            return v ? h * x / t >= 22 && w >= need : w * x / t >= need;
           });
+          b.closest('.dsc-col, .dsc-sub, .dsc-rb').classList.toggle('is-in', ok);
         });
-      });
-
-      // ---------------------------------------------------------------- Social Sciences open, as the printed inset; bars grow once
-      toggle(0);
-      if (k.motion && 'IntersectionObserver' in window) {
-        chart.classList.add('is-pre');
-        var io = new IntersectionObserver(function (es) {
-          if (!es.some(function (e) { return e.isIntersecting; })) return;
-          io.disconnect();
-          void chart.offsetWidth;   // the bars are drawn at zero first, so the change below is a transition
-          chart.classList.add('is-grow'); chart.classList.remove('is-pre');
-          setTimeout(function () { chart.classList.remove('is-grow'); }, 1600);
-        }, { threshold: 0.2 });
-        io.observe(chart);
+      }
+      function place() {
+        var inset = cols && cols.querySelector('.dsc-inset');
+        if (!inset) return;
+        function box(node) { // in the chart's own pixels: the stage scales in when it opens
+          var C = cols.getBoundingClientRect(), z = C.width / cols.offsetWidth || 1, r = node.getBoundingClientRect();
+          return { l: (r.left - C.left) / z, r: (r.right - C.left) / z, t: (r.top - C.top) / z, b: (r.bottom - C.top) / z };
+        }
+        var I = box(inset), lift = 0;
+        cols.querySelectorAll('.dsc-col').forEach(function (c) {   // a column under the inset: its numbers stay clear
+          var r = box(c.querySelector('.dsc-top')), f = c.querySelector('.dsc-v').style.getPropertyValue('--f');
+          if (r.r > I.l && r.l < I.r && r.t < I.b + 10) lift = Math.max(lift, (I.b + 10 - r.t) / (1 - f));
+        });
+        if (lift) { cols.style.setProperty('--ph', Math.ceil(PH + lift) + 'px'); I = box(inset); }
+        var c = cols.querySelector('.dsc-col.is-open'), v = c.querySelector('.dsc-v'), B = box(v);
+        var yt = B.b - v.offsetHeight, segs;   // the bar's top at rest (the entrance scales it)
+        if (B.r <= I.l) segs = [[B.r, yt, I.l, I.t + 14], [B.r, B.b, I.l, I.b - 14]];          // left of the inset, as printed
+        else if (B.l >= I.r) segs = [[B.l, yt, I.r, I.t + 14], [B.l, B.b, I.r, I.b - 14]];     // right of it, mirrored
+        else { var yl = box(c.querySelector('.dsc-top')).t - 4; segs = [[B.l, yl, B.l, I.b], [B.r, yl, B.r, I.b]]; } // under it
+        var svg = cols.querySelector('.dsc-lead');
+        svg.textContent = '';
+        segs.forEach(function (q) { svg.appendChild(k.svg('line', { x1: q[0], y1: q[1], x2: q[2], y2: q[3] })); });
       }
 
-      // ---------------------------------------------------------------- notes and method
-      var ssSub = social.subfields[0];
-      k.notes({
-        what: 'Each of the ' + nf(N) + ' papers counted once, under the field of its <i>primary topic</i> in OpenAlex, an open catalogue of research that tags every paper with topics, each inside a subfield and a field. <b>Seed papers</b> (grey) are the ' +
-          nf(NS) + ' papers found by a keyword search in Scopus; <b>cited papers</b> (blue) are the ' + nf(NC) + ' works the seed papers cite when they define or describe a term, added by following those citations (the <i>corpus closure</i>).',
-        why: 'The two published classification schemes of media bias, by Spinde et al. (2025) and Rodrigo-Ginés et al. (2024), rest on literature reviews that focus on computer science. MBDef draws ' +
-          pct(sum(social.n), N) + ' of its papers from the social sciences, where media bias is mainly studied, and ' + pct(sum(cs.n), N) + ' from computer science.',
-        read: 'All bars share one scale from zero; grey and blue add up to the total. An opened field has its own scale: each subfield bar is a share of that field. <i>Unclassified</i> is not a field: OpenAlex gave these papers no topic.',
-        example: '<b>Social Sciences</b>, the largest bar: ' + nf(sum(social.n)) + ' of the ' + nf(N) + ' papers (' + pct(sum(social.n), N) + '), ' + nf(social.n[0]) + ' seed and ' + nf(social.n[1]) +
-          ' cited. Its largest subfield, ' + ssSub.name + ', holds ' + nf(sum(ssSub.n)) + ' papers alone, more than twice the ' + nf(sum(cs.n)) + ' of computer science.'
-      });
+      // ---------------------------------------------------------------- narrow: the columns as rows, opened in place
+      function drawRows() {
+        body.appendChild(key);
+        var rows = el('div', { class: 'dsc-rows' });
+        F.forEach(function (f, i) {
+          var t = sum(f.n);
+          var btn = el('button', {
+            type: 'button', class: 'dsc-rb', style: '--i:' + i, 'data-k': 'f' + i, 'aria-expanded': open === i ? 'true' : 'false',
+            'aria-label': f.name + ': ' + nf(t) + ' papers, ' + nf(f.n[0]) + ' seed, ' + nf(f.n[1]) + ' cited.'
+          },
+            el('span', { class: 'dsc-rname', text: f.name }),
+            el('span', { class: 'dsc-track' }, bar('dsc-h', f.n, t / YMAX), count('dsc-end', f.n, !same(f.today, f.n))));
+          btn.addEventListener('click', function () { setOpen(open === i ? -1 : i); });
+          hover(btn, function () { return fieldTip(f); });
+          rows.appendChild(el('div', { class: 'dsc-row' + (open === i ? ' is-open' : '') }, btn, open === i ? detail(f, false) : null));
+        });
+        body.appendChild(rows);
+      }
 
+      // ---------------------------------------------------------------- state and drawing
+      function render() {
+        var was = body.contains(document.activeElement) ? document.activeElement.getAttribute('data-k') : null;
+        k.tip.hide();
+        body.textContent = '';
+        cols = null;
+        var wide = W >= WIDE;
+        body.classList.toggle('is-wide', wide);
+        body.classList.toggle('is-tight', wide && (W - 58) / 12 < 88);   // narrow columns: smaller names
+        body.classList.toggle('is-enter', !entered && k.motion);
+        if (!entered) { entered = true; setTimeout(function () { body.classList.remove('is-enter'); }, 2200); }
+        if (wide) drawColumns(); else drawRows();
+        if (!data.lookup.same_as_print) {
+          body.appendChild(el('p', { class: 'dsc-dag' }, el('b', { text: '† ' }),
+            'OpenAlex classifies a few of these papers differently today (' + when + '); the bars keep the paper’s counts.'));
+        }
+        var pp = wide && papers();
+        if (pp) body.appendChild(pp);
+        fit();
+        place();
+        var t = was && body.querySelector('[data-k="' + was + '"]');
+        if (t) t.focus({ preventScroll: true });
+      }
+      function setOpen(i) { open = i; list = null; render(); }
+      function setList(v) {
+        var back = list === 'f' ? 'papers' : 's' + list;
+        list = v;
+        render();
+        var pp = body.querySelector('.dsc-pp');
+        if (pp) pp.scrollIntoView({ block: 'nearest', behavior: k.motion ? 'smooth' : 'auto' });
+        else if (document.activeElement === body || !body.contains(document.activeElement)) {
+          var t = body.querySelector('[data-k="' + back + '"]');   // the list closed under the focus: back to what opened it
+          if (t) t.focus({ preventScroll: true });
+        }
+      }
+
+      // Esc closes the list first, then goes back to the printed view; a further Esc closes the stage
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape' || panel.hidden || !panel.offsetParent || (list == null && open <= 0)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (list != null) { setList(null); return; }
+        var back = body.contains(document.activeElement) && 'f' + open;   // back to the print; the focus to the column that was open
+        setOpen(0);
+        var t = back && body.querySelector('[data-k="' + back + '"]');
+        if (t) t.focus({ preventScroll: true });
+      }, true);
+
+      k.onResize(function (w) { W = w; render(); });
+
+      // ---------------------------------------------------------------- how this is made
       var R = data.rule;
+      function words(n) { return ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][n] || String(n); }
+      function diffs(items) {
+        return items.filter(function (x) { return !same(x.today, x.n); }).map(function (x) {
+          return x.name + ' ' + nf(sum(x.today)) + ' (' + nf(x.today[0]) + ' seed, ' + nf(x.today[1]) + ' cited) instead of ' + nf(sum(x.n));
+        }).join('; ');
+      }
+      var inset = F.filter(function (f) { return f.printed_inset; })[0];
       k.method(
-        '<p><b>Rule.</b> Each paper is looked up in OpenAlex by its OpenAlex id, else by its DOI, and counted once, under the field of its primary topic. OpenAlex assigns topics automatically; nobody checked them. ' +
-        'Medicine and Health Professions form one bar, as in the paper. The ten largest fields are named, the remaining classified fields form one bar, and a paper OpenAlex cannot find or gives no topic is counted as unclassified, never guessed from its title. ' +
-        'An opened field shows its ' + words(R.subfields) + ' largest subfields, then the rest as one bar.</p>' +
-        '<p><b>Numbers.</b> The bars and the Social Sciences subfields show the counts printed in the paper; they add up to the ' + nf(N) + ' papers of the released papers table (' + nf(NS) + ' seed, ' + nf(NC) + ' cited). ' +
-        'OpenAlex reclassifies papers over time. ' + driftText + ' The subfields of the other fields, the papers listed and the reasons a paper is unclassified come from that lookup.</p>' +
-        '<p><b>Papers listed.</b> Per field the ' + words(R.papers) + ' papers with the most definitions in MBDef (' + words(R.papers_sub) + ' per subfield), among the ' + nf(R.confirmed) + ' of ' + nf(R.classified) +
-        ' classified papers whose title in MBDef is the title of the OpenAlex record they were matched to, so the field shown is surely theirs.</p>' +
-        '<p><b>Data.</b> MBDef’s papers table (OpenAlex ids, DOIs, titles, years, seed or cited, definitions per paper) and OpenAlex’s answers, kept in a cache file. ' +
-        'Made by <code>scripts/figs/disciplines.py</code>, which runs the discipline lookup of the MBDef code (tutorial 5 in the MBDef repository).</p>');
+        '<p><b>Rule.</b> Each of the ' + nf(N) + ' papers is counted once, under the field of its primary topic in OpenAlex (looked up by its OpenAlex id, else by its DOI; OpenAlex assigns topics automatically). ' +
+        'As in the paper, Medicine and Health Professions form one bar, the fields after the ten largest another, and a paper OpenAlex cannot find or gives no topic is unclassified, never guessed from its title. ' +
+        'The columns and the Social Sciences subfields carry the printed counts. Another field’s subfields (its ' + words(R.subfields) + ' largest, then the rest as one bar), the reasons behind Unclassified and the papers listed come from a fresh lookup on ' + when + '. ' +
+        '† marks where it differs from the print: ' + diffs(F) + (inset && diffs(inset.subfields) ? '; and within ' + inset.name + ', ' + diffs(inset.subfields) : '') + '.</p>' +
+        '<p><b>Papers listed.</b> The ' + words(R.papers) + ' papers of a field (' + words(R.papers_sub) + ' of a subfield) with the most definitions in MBDef, among the ' + nf(R.confirmed) + ' of ' + nf(R.classified) +
+        ' classified papers whose title in MBDef is the title of the OpenAlex record they were matched to. A title of fewer than three words, or made only of heading words and numbers (“Introduction and Background”, “EDITED BY”), is left out, as it names a chapter or a page rather than the work; ' +
+        'footnote marks (*) and stray symbol glyphs that PDF extraction leaves at a title’s end are dropped. Made by <code>scripts/figs/disciplines.py</code>, which runs the discipline lookup of the MBDef code (tutorial 5 in the MBDef repository).</p>');
     }
   });
 })();

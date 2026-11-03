@@ -21,7 +21,9 @@ is optional). Without it the script reads only the cache. It prints its checks a
 
 import argparse
 import json
+import re
 import sys
+import unicodedata
 from collections import Counter
 from pathlib import Path
 
@@ -71,6 +73,10 @@ REASONS = {  # why a paper has no field, in plain words
     "matched_without_primary_topic": "found in OpenAlex, but without a topic",
     "not_queried": "not looked up",
 }
+HEADING_WORDS = frozenset(  # words of a chapter or page heading; a title made only of these is not listed
+    "introduction background conclusion conclusions preface foreword editorial edited editor editors by chapter part "
+    "contents index abstract summary overview references appendix notes front matter and the of to a an in on for".split()
+)
 
 
 def field_of(row):
@@ -84,16 +90,31 @@ def pair(rows):
     return [c.get("seeds", 0), c.get("closure", 0)]
 
 
+def listable(title):
+    """True when TITLE can stand for its work in a list: three words or more, and not only heading words and numbers
+    (a title such as "Introduction", "EDITED BY" or "Introduction and Background" names a chapter or a page of a
+    book, not the work)."""
+    words = unicode_words(title or "").split()
+    return len(words) >= 3 and not {w for w in words if not w.isdigit()} <= HEADING_WORDS
+
+
+def shown_title(title):
+    """TITLE as listed: without the private-use glyphs and the trailing footnote marks (*, †) that PDF extraction leaves
+    ("Opinion Dynamics and Learning in Social Networks *"). The words, which the title check compares, stay the same."""
+    text = " ".join("".join(ch for ch in title if unicodedata.category(ch) != "Co").split())
+    return re.sub(r"[\s*†‡]+$", "", text)
+
+
 def top_papers(rows, n):
     """The N papers with the most definitions in MBDef, among those whose MBDef title is the title of the OpenAlex work
-    they were matched to (so the field shown is surely theirs, and the title is clean) and has three words or more
-    (a title such as "Introduction" names a chapter, not the work); ties by title, then id."""
+    they were matched to (so the field shown is surely theirs, and the title is clean) and is listable; ties by title,
+    then id."""
     ranked = sorted(
-        (r for r in rows if r["title_confirmed"] and len(unicode_words(r["title"] or "").split()) >= 3),
+        (r for r in rows if r["title_confirmed"] and listable(r["title"])),
         key=lambda r: (-r["n_definitions"], r["title"].lower(), r["paper_id"]),
     )
     return [
-        {"t": r["title"], "y": r["year"], "c": CORPUS[r["corpus"]], "d": r["n_definitions"]}
+        {"t": shown_title(r["title"]), "y": r["year"], "c": CORPUS[r["corpus"]], "d": r["n_definitions"]}
         for r in ranked[:n]
     ]
 
@@ -220,6 +241,9 @@ def main():
             drift.append(f"Social Sciences / {name}: printed {s + c:,} ({s:,}, {c:,}), today {sum(today):,} ({today[0]:,}, {today[1]:,})")
     social_entry["subfields"] = inset
     social_entry["printed_inset"] = True
+    listed = [p["t"] for f in fields for g in [f, *f.get("subfields", [])] for p in g.get("papers", [])]
+    clean = all(listable(t) and t == shown_title(t) for t in listed)
+    check("listed titles are listable, without footnote marks", clean, f"{len(listed)} listed")
 
     stamps = sorted(e["retrieved_at"][:10] for e in cache["lookups"].values() if e.get("retrieved_at"))
     data = {

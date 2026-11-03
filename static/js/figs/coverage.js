@@ -1,193 +1,151 @@
-/* Fig. 4, interactive: how many MBDef papers define each of the eleven bias types that two published classification
-   schemes both report. One row per type, grouped by level as printed; one dot per paper (grey seed, blue cited); two
-   marks per row say how each scheme covers the type. Hover or focus a dot for the paper, click a dot or a type's name
-   for the list of its papers with the term each one defines. Data: static/data/figs/coverage.json, made by
+/* Fig. 4, interactive: the printed figure come alive. The eleven bias types that two published classification schemes
+   both report, grouped left to right by level as printed. Each type is a column: its count, one dot per MBDef paper
+   that defines it (grey seed papers at the bottom, blue cited papers on top, like the printed bar), the two schemes'
+   marks and its name. When the names do not fit side by side (phones), the types become rows. Hover or focus shows the
+   numbers; a click on a type lists its papers, and a second click, the × or Esc closes the list. Data: static/data/figs/coverage.json, made by
    scripts/figs/coverage.py from the released tables. */
 (function () {
   'use strict';
-
-  var GLOSS = {
-    'Reporting level': 'what gets reported',
-    'Statement level': 'how statements are presented',
-    'Language level': 'which words are chosen'
-  };
 
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
   }
   function lower(name) { return name.charAt(0).toLowerCase() + name.slice(1); }
-  function shortTitle(t) { var i = t.indexOf(':'); return i > 12 ? t.slice(0, i) : t; }
-  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
+  function plural(n, one) { return n + ' ' + one + (n === 1 ? '' : 's'); }
+  function pair(d) { return '(' + d[1] + ', ' + d[2] + ')'; }
 
   FIG.register('coverage', {
     build: function (panel, data, k) {
-      var el = k.el, svgEl = k.svg;
-      var schemes = data.schemes, types = data.types;
-      var byName = {};
-      types.forEach(function (t) { byName[t.name] = t; });
-      var selected = null, hit = null, narrow = false, entered = !k.motion, expanded = false;
-      var LIMIT = 12; // papers listed before 'Show all'
-      var rowsByName = {};
+      var el = k.el, svgEl = k.svg, schemes = data.schemes, types = data.types, levels = data.levels;
+      var LIMIT = 6;         // papers listed before 'Show all'
+      var COLS_MIN = 940;    // from this chart width the types stand in columns, as printed (if their names fit)
+      var PER = 5;           // dots per line of a column
+      var selected = null, hit = null, expanded = false, mode = '', animate = k.motion, recs = [];
 
-      // ---------------------------------------------------------------- head
-      var defined = types.filter(function (t) { return t.data[0] > 0; }).length;
-      k.head({
-        fig: 'Fig. 4',
-        title: 'Does MBDef cover the bias types that existing classification schemes name?',
-        lead: 'Yes. All <b>' + (defined === 11 ? 'eleven' : defined) + '</b> bias types that two published classification ' +
-          'schemes both report are defined in MBDef papers. Types about what gets reported and how statements are ' +
-          'presented are defined often; language-level types are rare under the names the schemes use.',
-        stats: [
-          { value: defined + ' of ' + types.length, label: 'types defined in MBDef' },
-          { value: String(data.in8), label: 'types defined in 8 or more papers' }
-        ]
-      });
+      function isDiff(t) { return data.differences.indexOf(t.name) >= 0; }
+      function ofLevel(lv) { return types.filter(function (t) { return t.level === lv; }); }
 
-      // ---------------------------------------------------------------- legend
-      function markSvg(kind, size) {
-        var s = size || 16, c = s / 2, r = s / 2 - 2;
+      // ---------------------------------------------------------------- marks and tooltips
+      function markSvg(kind, s) {
+        var c = s / 2, r = s / 2 - 2.6;
         var g = svgEl('svg', { width: s, height: s, viewBox: '0 0 ' + s + ' ' + s, 'aria-hidden': 'true', class: 'cov-mark-svg' });
-        if (kind === 'full') g.appendChild(svgEl('circle', { cx: c, cy: c, r: r, class: 'cov-mark-fill' }));
+        if (kind === 'full') g.appendChild(svgEl('circle', { cx: c, cy: c, r: r + 0.6, class: 'cov-mark-fill' }));
         else {
-          g.appendChild(svgEl('circle', { cx: c, cy: c, r: r - 0.6, class: 'cov-mark-ring' }));
-          g.appendChild(svgEl('path', { d: 'M' + c + ' ' + (c - r + 0.6) + ' A' + (r - 0.6) + ' ' + (r - 0.6) + ' 0 0 0 ' + c + ' ' + (c + r - 0.6) + ' Z', class: 'cov-mark-fill' }));
+          g.appendChild(svgEl('circle', { cx: c, cy: c, r: r, class: 'cov-mark-ring' }));
+          g.appendChild(svgEl('path', { d: 'M' + c + ' ' + (c - r) + ' A' + r + ' ' + r + ' 0 0 0 ' + c + ' ' + (c + r) + ' Z', class: 'cov-mark-fill' }));
         }
         return g;
       }
-      var body = k.body();
-      body.appendChild(el('div', { class: 'fig-legend cov-legend' },
-        el('span', { class: 'cov-leg-group' },
-          el('span', { class: 'cov-leg-k', text: 'One dot per paper' }),
-          el('span', null, el('i', { class: 'cov-sw is-seed' }), el('b', { text: 'Seed paper' }), ', found by the literature search'),
-          el('span', null, el('i', { class: 'cov-sw is-cited' }), el('b', { text: 'Cited paper' }), ', added because a seed paper cites it')),
-        el('span', { class: 'cov-leg-group' },
-          el('span', { class: 'cov-leg-k', text: 'Scheme marks' }),
-          el('span', { class: 'cov-leg-mark' }, markSvg('full', 14), 'Listed by the scheme'),
-          el('span', { class: 'cov-leg-mark' }, markSvg('half', 14), 'Covered under a different name'))));
-
-      var chart = el('div', { class: 'cov-chart' + (k.motion ? ' cov-pre' : '') });
-      body.appendChild(chart);
-
-      // ---------------------------------------------------------------- the note on printed numbers
-      var diffs = data.differences.map(function (n) { return byName[n]; });
-      function diffWords(t) {
-        var parts = [];
-        [[1, 'seed'], [2, 'cited']].forEach(function (p) {
-          var d = t.data[p[0]] - t.printed[p[0]];
-          if (d) parts.push((Math.abs(d) === 1 ? 'one' : Math.abs(d)) + (d > 0 ? ' more ' : ' fewer ') + p[1] + ' paper' + (Math.abs(d) === 1 ? '' : 's'));
-        });
-        return parts.join(' and ');
-      }
-      if (diffs.length) {
-        body.appendChild(el('p', {
-          class: 'cov-diff', html: '<span class="cov-dag">†</span> ' + (diffs.length === 1 ? 'One count differs' : 'Two counts differ') +
-            ' from the printed figure: ' + diffs.map(function (t) {
-              return '<i>' + esc(lower(t.name)) + '</i> has ' + t.data[0] + ' papers here and ' + t.printed[0] + ' in print (' + diffWords(t) + ')';
-            }).join('; ') + '. The dots follow the released data.'
-        }));
-      }
-
-      var detail = el('div', { class: 'cov-detail', 'aria-live': 'polite' });
-      body.appendChild(detail);
-
-      // ---------------------------------------------------------------- tooltips
-      function paperNode(t, p) {
-        var terms = p.w.map(function (w) {
-          return w[1] ? '“' + w[0] + '”, giving “' + w[1] + '” as a synonym' : '“' + w[0] + '”';
-        }).join('; ');
-        return el('div', null,
-          el('b', { text: p.t }),
-          el('div', { class: 'k', text: (p.y || 'year unknown') + ' · ' + (p.s ? 'seed paper' : 'cited paper') }),
-          el('div', { text: 'Defines ' + terms }),
-          el('div', { class: 'k', text: 'Click to list all ' + plural(t.data[0], 'paper') + ' of this type' }));
-      }
       function markText(sch, t) {
-        var kind = t.marks[sch.key], a = t.alias[sch.key];
-        if (kind === 'full') return 'Listed as a type of its own.';
+        var a = t.alias[sch.key];
+        if (t.marks[sch.key] === 'full') return 'Listed as a type of its own.';
         if (a) return 'Covered under a different name: ' + a[0] + ' (its Section ' + a[1] + ').';
         return 'Covered under a different name; the comparison table behind the printed figure does not say which.';
       }
-      function refNode(sch) {
-        return el('div', null, el('b', { text: sch.authors + ' (' + sch.year + ')' }),
-          el('div', { text: sch.title + '. ' + sch.venue + '.' }),
-          el('div', { class: 'k', text: 'Opens the publication' }));
-      }
       function tipOn(node, make) {
-        node.addEventListener('mouseenter', function (e) { k.tip.show(e, make()); });
-        node.addEventListener('mousemove', function (e) { k.tip.show(e, make()); });
+        function on(e) { k.tip.show(e, make()); }
+        node.addEventListener('mouseenter', on);
+        node.addEventListener('mousemove', on);
         node.addEventListener('mouseleave', k.tip.hide);
-        node.addEventListener('focus', function (e) { k.tip.show(e, make()); });
+        node.addEventListener('focus', on);
         node.addEventListener('blur', k.tip.hide);
       }
-
-      // ---------------------------------------------------------------- rows
-      function headRow() {
-        var row = el('div', { class: 'cov-row cov-headrow' },
-          el('span', { class: 'cov-h cov-h-name', text: 'Bias type' }),
-          schemes.map(function (sch) {
-            var a = el('a', { class: 'cov-h cov-h-scheme', href: 'https://doi.org/' + sch.doi, target: '_blank', rel: 'noopener', text: sch.short });
-            tipOn(a, function () { return refNode(sch); });
-            return a;
-          }),
-          el('span', { class: 'cov-h cov-h-n', text: 'Papers' }));
-        return row;
+      function countTip(t) {
+        return el('div', null, el('b', { text: t.name }),
+          el('div', { text: plural(t.data[0], 'paper') + ': ' + t.data[1] + ' seed, ' + t.data[2] + ' cited' }),
+          isDiff(t) ? el('div', { class: 'k', text: '† Printed: ' + t.printed[0] + ' ' + pair(t.printed) }) : null);
+      }
+      function termsText(p) {
+        return p.w.map(function (w) { return '“' + w[0] + '”' + (w[1] ? ', synonym “' + w[1] + '”' : ''); }).join('; ');
+      }
+      function paperTip(p) {
+        return el('div', null, el('b', { text: p.t }),
+          el('div', { class: 'k', text: (p.y ? p.y + ' · ' : '') + (p.s ? 'seed paper' : 'cited paper') }),
+          el('div', { text: 'Defines ' + termsText(p) }));
+      }
+      function schemeLink(sch) {
+        var a = el('a', { class: 'cov-scheme', href: 'https://doi.org/' + sch.doi, target: '_blank', rel: 'noopener', text: sch.short });
+        tipOn(a, function () {
+          return el('div', null, el('b', { text: sch.authors + ' (' + sch.year + ')' }), el('div', { text: sch.title + '. ' + sch.venue + '.' }));
+        });
+        return a;
       }
 
-      function typeRow(t, ti) {
-        var name = el('button', {
+      // ---------------------------------------------------------------- the frame: chart, legend, † line, list
+      var body = k.body();
+      var chart = el('div', { class: 'cov-chart' });
+      var legend = el('p', { class: 'cov-legend' },
+        el('span', null, el('i', { class: 'cov-sw is-seed' }), 'Seed paper'),
+        el('span', null, el('i', { class: 'cov-sw is-cited' }), 'Cited paper'),
+        el('span', null, markSvg('full', 14), 'Listed'),
+        el('span', null, markSvg('half', 14), 'Covered under a different name'));
+      var diffs = types.filter(isDiff);
+      var note = diffs.length ? el('p', { class: 'cov-diff' }, el('span', { class: 'cov-dag', text: '†' }),
+        ' Printed: ' + diffs.map(function (t) { return t.printed[0] + ' ' + pair(t.printed); }).join(' and ') +
+        '. The dots follow the released data.') : null;
+      var detail = el('section', { class: 'cov-detail', hidden: true, 'aria-live': 'polite' });
+      body.appendChild(chart);
+      body.appendChild(legend);
+      if (note) body.appendChild(note);
+      body.appendChild(detail);
+
+      // ---------------------------------------------------------------- one type's parts
+      function parts(t, ti) {
+        var rec = { t: t, ti: ti };
+        rec.name = el('button', {
           type: 'button', class: 'cov-name', 'aria-expanded': selected === t ? 'true' : 'false',
-          'aria-label': t.name + ': ' + plural(t.data[0], 'paper') + ', ' + t.data[1] + ' seed and ' + t.data[2] + ' cited. Show the papers.',
-          text: t.name,
-          onclick: function () { select(selected === t ? null : t, null); }
+          'aria-label': t.name + ': ' + plural(t.data[0], 'paper') + ', ' + t.data[1] + ' seed and ' + t.data[2] + ' cited. List the papers.',
+          text: mode === 'cols' ? t.name.replace(/ \//g, '\u00a0/') : t.name // keep 'Gatekeeping /' on one line, as printed
         });
-        var marks = schemes.map(function (sch) {
-          var b = el('button', { type: 'button', class: 'cov-mark', 'aria-label': sch.short + ': ' + markText(sch, t) }, markSvg(t.marks[sch.key]));
-          tipOn(b, function () { return el('div', null, el('b', { text: sch.short }), el('div', { text: markText(sch, t) })); });
-          return b;
+        tipOn(rec.name, function () { return countTip(t); });
+        rec.count = el('span', { class: 'cov-count' },
+          el('b', null, String(t.data[0]), isDiff(t) ? el('sup', { class: 'cov-dag', text: '†' }) : null),
+          el('small', null, '(', el('span', { class: 's', text: t.data[1] }), ', ', el('span', { class: 'c', text: t.data[2] }), ')'));
+        tipOn(rec.count, function () { return countTip(t); });
+        rec.marks = schemes.map(function (sch) {
+          var m = el('span', { class: 'cov-mark', tabindex: 0, role: 'img', 'aria-label': sch.short + ': ' + markText(sch, t) }, markSvg(t.marks[sch.key], 16));
+          tipOn(m, function () { return el('div', null, el('b', { text: sch.short }), el('div', { text: markText(sch, t) })); });
+          return m;
         });
-        var isDiff = data.differences.indexOf(t.name) >= 0;
-        var count = el('span', { class: 'cov-count' },
-          el('b', null, String(t.data[0]), isDiff ? el('sup', { class: 'cov-dag', text: '†' }) : null),
-          el('small', null, el('span', { class: 's', text: t.data[1] }), ' + ', el('span', { class: 'c', text: t.data[2] })));
-        tipOn(count, function () {
-          return el('div', null, el('b', { text: plural(t.data[0], 'paper') }),
-            el('div', { text: t.data[1] + ' seed, ' + t.data[2] + ' cited' }),
-            isDiff ? el('div', { class: 'k', text: 'Printed figure: ' + t.printed[0] + ' (' + t.printed[1] + ' seed, ' + t.printed[2] + ' cited)' }) : null);
+        rec.cell = el('div', { class: 'cov-dotcell' });
+        return rec;
+      }
+      function bindBox(rec, box) {
+        rec.box = box;
+        box.addEventListener('click', function (e) {
+          var d = e.target.closest('.cov-dot');
+          pick(rec.t, d ? +d.getAttribute('data-i') : null);
         });
-        var dotCell = el('div', { class: 'cov-dotcell' });
-        var row = el('div', { class: 'cov-row cov-type' + (selected === t ? ' is-on' : '') }, name, marks, count, dotCell);
-        rowsByName[t.name] = { row: row, name: name, cell: dotCell, t: t, ti: ti };
-        return row;
+        recs.push(rec);
       }
 
-      function drawDots(rec) {
-        var t = rec.t, w = Math.max(60, Math.floor(rec.cell.clientWidth));
-        var pitch = narrow ? 13 : 14, r = narrow ? 4.8 : 5.2;
-        var per = Math.max(1, Math.floor((w - 2 * r - 2) / pitch) + 1);
-        var n = t.papers.length, lines = Math.max(1, Math.ceil(n / per));
+      // the dots: in columns they stack from the bottom up, PER to a line; in rows they run left to right
+      function drawDots(rec, per, pitch) {
+        var t = rec.t, n = t.papers.length, r = pitch * 0.37, up = mode === 'cols';
+        var lines = Math.ceil(n / per);
+        var w = up ? (per - 1) * pitch + 2 * r + 4 : Math.max(60, Math.floor(rec.cell.clientWidth));
         var h = (lines - 1) * pitch + 2 * r + 4;
         var g = svgEl('svg', {
           class: 'cov-dots', width: w, height: h, viewBox: '0 0 ' + w + ' ' + h, role: 'group',
-          'aria-label': plural(n, 'paper') + ' define ' + lower(t.name) + ', one dot each; use the arrow keys to move between them'
+          'aria-label': plural(n, 'paper') + ' define ' + lower(t.name) + ', one dot each'
         });
-        var dots = [];
-        t.papers.forEach(function (p, i) {
+        var dots = t.papers.map(function (p, i) {
+          var col = i % per, line = Math.floor(i / per);
           var c = svgEl('circle', {
-            cx: r + 2 + (i % per) * pitch, cy: r + 2 + Math.floor(i / per) * pitch, r: r,
+            cx: r + 2 + col * pitch, cy: up ? h - r - 2 - line * pitch : r + 2 + line * pitch, r: r, 'data-i': i,
             class: 'cov-dot ' + (p.s ? 'is-seed' : 'is-cited') + (selected === t && hit === i ? ' is-hit' : ''),
             tabindex: i === 0 ? 0 : -1, role: 'button',
-            'aria-label': p.t + ', ' + (p.y || 'year unknown') + ', ' + (p.s ? 'seed' : 'cited') + ' paper; defines ' +
+            'aria-label': p.t + ', ' + (p.y ? p.y + ', ' : '') + (p.s ? 'seed' : 'cited') + ' paper; defines ' +
               p.w.map(function (x) { return x[0]; }).join(', ')
           });
-          if (!entered) c.style.transitionDelay = (rec.ti * 55 + i * 16) + 'ms';
-          tipOn(c, function () { return paperNode(t, p); });
-          c.addEventListener('click', function () { select(t, i); });
+          if (animate) c.style.animationDelay = (up ? 250 + rec.ti * 45 + line * 45 + col * 8 : rec.ti * 55 + i * 12) + 'ms';
+          tipOn(c, function () { return paperTip(p); });
           c.addEventListener('keydown', function (e) {
-            var j = null;
+            var j = null, step = up ? -per : per;
             if (e.key === 'ArrowRight') j = i + 1; else if (e.key === 'ArrowLeft') j = i - 1;
-            else if (e.key === 'ArrowDown') j = i + per; else if (e.key === 'ArrowUp') j = i - per;
+            else if (e.key === 'ArrowDown') j = i + step; else if (e.key === 'ArrowUp') j = i - step;
             else if (e.key === 'Home') j = 0; else if (e.key === 'End') j = n - 1;
-            else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(t, i); return; }
+            else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); pick(t, i); return; }
             if (j == null) return;
             e.preventDefault();
             j = Math.max(0, Math.min(n - 1, j));
@@ -195,175 +153,175 @@
             dots[j].setAttribute('tabindex', '0');
             dots[j].focus();
           });
-          dots.push(c);
           g.appendChild(c);
+          return c;
         });
         rec.cell.textContent = '';
         rec.cell.appendChild(g);
       }
 
-      function render(width) {
-        narrow = width < 640;
-        chart.classList.toggle('is-narrow', narrow);
-        chart.classList.toggle('has-sel', !!selected);
-        chart.textContent = '';
-        rowsByName = {};
-        chart.appendChild(headRow());
-        var ti = 0;
-        data.levels.forEach(function (lv) {
-          chart.appendChild(el('div', { class: 'cov-level' },
-            el('span', { class: 'cov-level-k', text: lv }), el('span', { class: 'cov-level-g', text: GLOSS[lv] || '' })));
-          types.forEach(function (t) { if (t.level === lv) chart.appendChild(typeRow(t, ti++)); });
+      // ---------------------------------------------------------------- columns, as printed (wide screens)
+      function renderCols(width) {
+        var gut = 112, gap = 22, cg = 6, nT = types.length, nL = levels.length;
+        var colW = (width - gut - (nL - 1) * gap - (nT + nL - 1) * cg) / nT;
+        var pitch = Math.max(12, Math.min(16, Math.floor((colW - 12) / PER)));
+        var tpl = [gut + 'px'], c = 2, ti = 0;
+        chart.appendChild(el('div', { class: 'cov-gut' }, el('span'), schemes.map(schemeLink), el('span')));
+        levels.forEach(function (lv, li) {
+          if (li) { tpl.push(gap + 'px'); c++; }
+          var group = ofLevel(lv);
+          chart.appendChild(el('div', { class: 'cov-lv', style: 'grid-column: ' + c + ' / span ' + group.length, text: lv }));
+          group.forEach(function (t) {
+            tpl.push('minmax(min-content, 1fr)');
+            var rec = parts(t, ti++);
+            var box = el('div', { class: 'cov-col', style: 'grid-column: ' + (c++) },
+              el('div', { class: 'cov-bar' }, rec.count, rec.cell), rec.marks, rec.name);
+            bindBox(rec, box);
+            chart.appendChild(box);
+            drawDots(rec, PER, pitch);
+          });
         });
-        Object.keys(rowsByName).forEach(function (n) { drawDots(rowsByName[n]); });
+        chart.style.gridTemplateColumns = tpl.join(' ');
       }
 
-      // ---------------------------------------------------------------- the list of papers
-      function hint() {
-        detail.classList.remove('is-open');
-        detail.textContent = '';
-        detail.appendChild(el('p', { class: 'cov-hint', text: 'Click a type’s name or any dot to list the papers behind it, with the term each paper defines and a short quote.' }));
+      // ---------------------------------------------------------------- rows (phones and narrow windows)
+      function renderRows(width) {
+        var narrow = width < 640, pitch = narrow ? 13 : 14, ti = 0;
+        chart.classList.toggle('is-narrow', narrow);
+        chart.appendChild(el('div', { class: 'cov-row cov-headrow' }, el('span'), schemes.map(schemeLink), el('span')));
+        levels.forEach(function (lv) {
+          chart.appendChild(el('div', { class: 'cov-lv', text: lv }));
+          ofLevel(lv).forEach(function (t) {
+            var rec = parts(t, ti++);
+            var box = el('div', { class: 'cov-row cov-type' }, rec.name, rec.marks, rec.count, rec.cell);
+            bindBox(rec, box);
+            chart.appendChild(box);
+          });
+        });
+        recs.forEach(function (rec) {
+          var w = Math.max(60, Math.floor(rec.cell.clientWidth)), r = pitch * 0.37;
+          drawDots(rec, Math.max(1, Math.floor((w - 2 * r - 4) / pitch) + 1), pitch);
+        });
       }
 
+      function draw(m, width) {
+        mode = m;
+        chart.className = 'cov-chart is-' + mode + (animate ? ' is-entering' : '');
+        chart.style.gridTemplateColumns = '';
+        chart.textContent = '';
+        recs = [];
+        legend.className = 'cov-legend' + (mode === 'rows' ? ' is-top' : '');
+        body.insertBefore(legend, mode === 'cols' ? chart.nextSibling : chart); // under the chart as printed; above the rows
+        if (mode === 'cols') renderCols(width); else renderRows(width);
+      }
+      function render(width) {
+        draw(width >= COLS_MIN ? 'cols' : 'rows', width);
+        if (mode === 'cols' && chart.scrollWidth > chart.clientWidth + 1) draw('rows', width); // the names do not fit side by side
+        paint();
+        if (animate) {
+          animate = false;
+          setTimeout(function () { chart.classList.remove('is-entering'); }, 2400);
+        }
+      }
+
+      // ---------------------------------------------------------------- the list of papers, on a click
       function renderDetail() {
-        if (!selected) { hint(); return; }
-        var t = selected;
-        detail.classList.add('is-open');
         detail.textContent = '';
-        var schemeLine = schemes.map(function (sch) { return '<b>' + esc(sch.short) + '</b>: ' + esc(lower(markText(sch, t))); }).join(' ');
-        var isDiff = data.differences.indexOf(t.name) >= 0;
+        detail.hidden = !selected;
+        if (!selected) return;
+        var t = selected;
+        var shown = expanded ? t.papers.length : Math.min(LIMIT, t.papers.length);
+        var order = t.papers.map(function (p, i) { return i; });
+        if (hit != null) order = [hit].concat(order.filter(function (i) { return i !== hit; })); // the clicked paper first
         var list = el('ol', { class: 'cov-list', 'aria-label': 'Papers that define ' + lower(t.name) });
-        var shown = expanded || (hit != null && hit >= LIMIT) ? t.papers.length : Math.min(LIMIT, t.papers.length);
-        t.papers.slice(0, shown).forEach(function (p, i) {
-          var terms = p.w.map(function (w) {
-            return '“' + esc(w[0]) + '”' + (w[1] ? ', giving “' + esc(w[1]) + '” as a synonym' : '');
-          }).join('; ');
+        order.slice(0, shown).forEach(function (i) {
+          var p = t.papers[i];
           var written = p.w.map(function (w) { return (w[1] || w[0]).toLowerCase(); });
           var other = p.m.filter(function (m) { return written.indexOf(m) < 0; });
-          var counted = other.length && p.m.length === other.length ? ' <span class="cov-faint">(counted as ' + p.m.map(esc).join(', ') + ')</span>' : '';
           list.appendChild(el('li', { class: 'cov-item' + (hit === i ? ' is-hit' : '') },
             el('i', { class: 'cov-sw ' + (p.s ? 'is-seed' : 'is-cited') }),
             el('div', null,
               el('p', { class: 'cov-it' }, el('b', { text: p.t }), ' ',
-                el('span', { class: 'cov-faint', text: (p.y || 'year unknown') + ' · ' + (p.s ? 'seed' : 'cited') + (p.n > 1 ? ' · ' + p.n + ' matching definitions' : '') })),
-              el('p', { class: 'cov-iw', html: 'Defines ' + terms + counted }),
+                el('span', { class: 'cov-faint', text: (p.y ? p.y + ' · ' : '') + (p.s ? 'seed' : 'cited') })),
+              el('p', { class: 'cov-iw' }, 'Defines ' + termsText(p),
+                other.length && p.m.length === other.length ? el('span', { class: 'cov-faint', text: ' (counted as ' + p.m.join(', ') + ')' }) : null),
               el('p', { class: 'cov-iq', text: '“' + p.q + '”' }))));
         });
         detail.appendChild(el('div', { class: 'cov-dhead' },
           el('div', null,
-            el('p', { class: 'cov-deyebrow', text: t.level }),
-            el('h4', { class: 'cov-dtitle', text: t.name }),
-            el('p', { class: 'cov-dmeta' }, el('b', { text: plural(t.data[0], 'paper') }), ': ',
-              el('span', { class: 's', text: t.data[1] + ' seed' }), ', ', el('span', { class: 'c', text: t.data[2] + ' cited' }),
-              isDiff ? el('span', { class: 'cov-faint', text: ' (printed: ' + t.printed[0] + ', with ' + t.printed[1] + ' seed)' }) : null)),
-          el('button', { type: 'button', class: 'cov-close', 'aria-label': 'Close the list', text: '×', onclick: function () { select(null, null); } })));
-        detail.appendChild(el('p', {
-          class: 'cov-drule', html: 'Counted when a paper defines one of these names, or gives one as a synonym of the term it defines: ' +
-            t.search.map(function (s) { return '<i>' + esc(s) + '</i>'; }).join(', ') + '.' +
-            (t.context ? ' Because these are also everyday words, the definition must also mention the ' + esc(data.context_words) + '.' : '')
-        }));
-        detail.appendChild(el('p', { class: 'cov-drule', html: schemeLine }));
+            el('h4', { class: 'cov-dtitle' }, t.name, ' ',
+              el('span', { class: 'cov-dmeta' }, plural(t.data[0], 'paper') + ' ',
+                el('span', null, '(', el('span', { class: 's', text: t.data[1] + ' seed' }), ', ', el('span', { class: 'c', text: t.data[2] + ' cited' }), ')'))),
+            el('p', {
+              class: 'cov-drule', html: 'Matched names: ' + t.search.map(function (s) { return '<i>' + esc(s) + '</i>'; }).join(', ') +
+                (t.context ? '; the definition must also mention the ' + esc(data.context_words) : '') + '.'
+            })),
+          el('button', { type: 'button', class: 'cov-close', 'aria-label': 'Close the list', title: 'Close (Esc)', text: '×', onclick: function () { pick(null); } })));
         detail.appendChild(list);
-        if (shown < t.papers.length) {
-          detail.appendChild(el('button', {
-            type: 'button', class: 'fig-chip cov-more', text: 'Show all ' + t.papers.length + ' papers',
+        detail.appendChild(el('p', { class: 'cov-foot' },
+          shown < t.papers.length ? el('button', {
+            type: 'button', class: 'fig-chip', text: 'Show all ' + t.papers.length,
             onclick: function () { expanded = true; renderDetail(); }
-          }));
-        }
-        detail.appendChild(el('p', { class: 'cov-explore' },
+          }) : null,
           el('a', {
             class: 'fig-link', href: k.explorer('concepts'), target: '_blank', rel: 'noopener',
-            text: 'Search ' + t.explore.map(function (s) { return '“' + s + '”'; }).join(' or ') + ' in the Explorer’s Concepts tab for every definition →'
+            text: t.explore.map(function (s) { return '“' + s + '”'; }).join(' or ') + ' in the Explorer →'
           })));
       }
 
-      function select(t, i) {
-        if (t !== selected) expanded = false;
-        selected = t;
-        hit = t ? i : null;
-        chart.classList.toggle('has-sel', !!t);
-        Object.keys(rowsByName).forEach(function (n) {
-          var rec = rowsByName[n], on = rec.t === t;
-          rec.row.classList.toggle('is-on', on);
+      function paint() {
+        chart.classList.toggle('has-sel', !!selected);
+        recs.forEach(function (rec) {
+          var on = rec.t === selected;
+          rec.box.classList.toggle('is-on', on);
           rec.name.setAttribute('aria-expanded', on ? 'true' : 'false');
           [].forEach.call(rec.cell.querySelectorAll('.cov-dot'), function (d, j) { d.classList.toggle('is-hit', on && j === hit); });
         });
-        renderDetail();
-        if (t) {
-          var r = detail.getBoundingClientRect();
-          if (r.top > window.innerHeight - 140) window.scrollBy({ top: r.top - window.innerHeight * 0.3, behavior: k.motion ? 'smooth' : 'auto' });
-        }
       }
+
+      // a click on a type opens its list; the same click again (or on the dot already marked) closes it
+      function pick(t, i) {
+        if (i === undefined) i = null;
+        if (t && t === selected && (i == null || i === hit)) t = null;
+        var was = selected, inList = detail.contains(document.activeElement);
+        if (t !== selected) expanded = false;
+        selected = t;
+        hit = t ? i : null;
+        paint();
+        renderDetail();
+        if (!t) recs.forEach(function (rec) { // closed: back to the type the list belonged to
+          if (rec.t !== was) return;
+          if (inList) rec.name.focus({ preventScroll: true });
+          rec.box.scrollIntoView({ block: 'nearest', behavior: k.motion ? 'smooth' : 'auto' });
+        });
+        if (t) detail.scrollIntoView({ block: 'nearest', behavior: k.motion ? 'smooth' : 'auto' }); // the stage's own box scrolls, not the page
+      }
+
+      // Esc closes the list first (and keeps the stage open); a second Esc closes the stage
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape' || !selected || panel.hidden || !panel.offsetParent) return;
+        e.preventDefault();
+        e.stopPropagation();
+        pick(null);
+      }, true);
 
       k.onResize(render);
-      hint();
 
-      // ---------------------------------------------------------------- one entrance: the dots fill in, row by row
-      function enter() {
-        entered = true;
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () {
-            chart.classList.remove('cov-pre');
-            setTimeout(function () {
-              [].forEach.call(chart.querySelectorAll('.cov-dot'), function (d) { d.style.transitionDelay = ''; });
-            }, 1600);
-          });
-        });
-      }
-      if (!entered) {
-        if ('IntersectionObserver' in window) {
-          var io = new IntersectionObserver(function (es) {
-            if (es.some(function (e) { return e.isIntersecting; })) { io.disconnect(); enter(); }
-          }, { threshold: 0.15 });
-          io.observe(chart);
-        } else enter();
-      }
-
-      // ---------------------------------------------------------------- notes and method
-      var top = byName[data.example.top], few = byName[data.example.fewest];
-      var topWord = top.explore[0], topWordN = top.papers.filter(function (p) { return p.m.indexOf(topWord) >= 0; }).length;
-      var fp = few.papers[0], plain = data.example.plain[few.name];
-      var fewAlias = schemes.filter(function (s) { return few.alias[s.key]; })[0];
-      var framing = byName['Framing bias'], framePlain = data.example.plain['Framing bias'];
-      var stanceN = framing.papers.filter(function (p) { return p.m.indexOf('stance') >= 0; }).length;
-      var topDiff = data.differences.indexOf(top.name) >= 0;
-
-      k.notes({
-        what: 'The eleven bias types that both <b>' + esc(schemes[0].short.replace(/ (\d{4})$/, ' ($1)')) + '</b> and <b>' +
-          esc(schemes[1].short.replace(/ (\d{4})$/, ' ($1)')) + '</b> report, grouped by the level at which the bias works. ' +
-          'Each dot is one MBDef paper that defines the type: grey for a seed paper, blue for a paper added because a seed paper cites it. ' +
-          'The two marks per row say how each scheme covers the type.',
-        why: 'Both schemes come from reviews of mostly computer-science work aimed at detection systems. MBDef collects definitions from many ' +
-          'disciplines, so it shows which of the schemes’ types the wider literature defines, and gives each one its competing definitions with their sources.',
-        read: 'The matching is automatic, not a semantic review: a paper counts when the term it defines, or a synonym it gives, matches one of ' +
-          'the type’s search names once case, spelling, plurals and word order are set aside. It counts names, not meanings: <b>' + k.nf(framePlain.papers) +
-          '</b> MBDef papers define <i>' + esc(framePlain.word) + '</i>, but framing bias counts only papers that use one of its search names (' +
-          framing.search.map(esc).join(', ') + '): ' + framing.data[0] + ', ' + stanceN + ' of them for <i>stance</i>.',
-        example: '<b>' + esc(top.name) + '</b>, the type with the most papers: ' + top.data[0] + ' (' + top.data[1] + ' seed, ' + top.data[2] + ' cited' +
-          (topDiff ? '; ' + top.printed[0] + ' in print' : '') + '), ' + topWordN + ' of them under the word <i>' + esc(topWord) + '</i>. <b>' + esc(few.name) +
-          '</b>, the language-level type with the fewest: ' + plural(few.data[0], 'paper') + (few.data[0] === 1 ? ', a ' + (fp.s ? 'seed' : 'cited') +
-          ' paper' + (fp.y ? ' from ' + fp.y : '') + ', <i>' + esc(shortTitle(fp.t)) + '</i>' : '') + '. Yet ' + plain.papers + ' MBDef papers define <i>' + esc(plain.word) +
-          '</i> itself' + (fewAlias ? ', and ' + esc(fewAlias.short.replace(/ \d{4}$/, '')) + ' cover it as ' + esc(few.alias[fewAlias.key][0]) : '') +
-          ': the idea is there, under other names.'
-      });
-
-      var ref = function (s) {
-        return esc(s.authors) + ' (' + s.year + '). ' + esc(s.title) + '. <i>' + esc(s.venue) + '</i>. <a href="https://doi.org/' + esc(s.doi) +
-          '" target="_blank" rel="noopener">doi.org/' + esc(s.doi) + '</a>';
+      // ---------------------------------------------------------------- how this is made
+      var ctx = types.filter(function (t) { return t.context; }).map(function (t) { return lower(t.name); });
+      var cite = function (s) {
+        return '<a href="https://doi.org/' + esc(s.doi) + '" target="_blank" rel="noopener">' + esc(s.short.replace(/ (\d{4})$/, ' ($1)')) + '</a>';
       };
       k.method(
-        '<p><b>The types.</b> The eleven types, their levels, how each scheme covers them and the search names of each type come from the ' +
-        'comparison table behind the printed figure. Only types that both schemes report, by name or under another name, are shown.</p>' +
-        '<p><b>The rule.</b> A definition counts for a type when one of the type’s search names matches the term it defines, or a synonym its own ' +
-        'paper gives for that term, once case, punctuation, spacing, plurals, British or American spelling and word order are set aside (the rule ' +
-        'that merged MBDef’s terms). For gatekeeping / selection bias and framing bias, which are also everyday words, the definition must also ' +
-        'mention the ' + esc(data.context_words) + '. A paper counts once per type, however many of its definitions match. No match was rejected ' +
-        'by hand: every dot is an automatic match, and the list under the chart lets a reader judge each one.</p>' +
-        '<p><b>The data.</b> MBDef’s released tables of definitions (each defined term and its text), term entries (the synonyms each paper gives) ' +
-        'and papers (title, year, seed or cited). The MBDef code’s taxonomy-coverage analysis (tutorial 06) does the matching; ' +
-        '<code>scripts/figs/coverage.py</code> runs it, writes this figure’s data and checks every count against the printed figure' +
-        (diffs.length ? ': ' + diffs.map(function (t) { return esc(lower(t.name)) + ' has ' + t.data[0] + ' papers in the released data against ' + t.printed[0] + ' printed'; }).join(', and ') + '; all other counts are as printed' : '') + '. Quotes are cut after 30 words.</p>' +
-        '<p><b>The schemes.</b> ' + schemes.map(ref).join('<br>') + '</p>');
+        '<p><b>The rule.</b> The eleven types are those that both ' + schemes.map(cite).join(' and ') + ' report, by name or under ' +
+        'another name, with their levels and search names from the comparison table behind the printed figure. A paper counts once ' +
+        'for a type when a term it defines, or a synonym its own paper gives for that term, matches one of the type’s search names ' +
+        'once case, punctuation, spacing, plurals, British or American spelling and word order are set aside. For ' + ctx.map(esc).join(' and ') +
+        ', which are also everyday words, the definition must also mention the ' + esc(data.context_words) + '. No match was removed by hand.</p>' +
+        '<p><b>The data.</b> <code>scripts/figs/coverage.py</code> runs the MBDef code’s taxonomy-coverage analysis (tutorial 06) on the ' +
+        'released definitions, term entries and papers, writes this figure’s data and checks every count against the print' +
+        (diffs.length ? ': ' + diffs.map(function (t) { return esc(lower(t.name)) + ' has ' + t.data[0] + ' papers against ' + t.printed[0] + ' printed'; }).join(', and ') +
+          '; all other counts are as printed' : '') + '. Quotes are cut after 30 words.</p>');
     }
   });
 })();

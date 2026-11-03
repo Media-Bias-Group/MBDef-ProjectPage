@@ -7,6 +7,9 @@
    with the panel, the parsed JSON and the helpers k below. When build returns, the panel gets data-ready="1"; when
    every shown panel is built, <body> gets data-figs-ready="1" (screenshots wait for it).
 
+   On the stage (.fig-stage, the dialog the printed figures open) k.head and k.notes add nothing: the stage's
+   header names the figure and its printed caption explains it.
+
    Helpers (k):
      k.el(tag, attrs, ...children)     an HTML element; attrs.text sets textContent, attrs.html innerHTML, on* adds listeners
      k.svg(tag, attrs, ...children)    an SVG element, the same way
@@ -73,7 +76,9 @@
   var tipEl = null, tipFocus = null; // tipFocus: the element a keyboard-shown tooltip belongs to
   var tip = {
     show: function (ev, content) {
-      if (!tipEl) { tipEl = el('div', { class: 'fig-tip', role: 'tooltip' }); document.body.appendChild(tipEl); }
+      if (!tipEl) tipEl = el('div', { class: 'fig-tip', role: 'tooltip' });
+      var host = (ev.target && ev.target.closest && ev.target.closest('dialog[open]')) || document.body;
+      if (tipEl.parentNode !== host) host.appendChild(tipEl);
       if (content != null) { tipEl.textContent = ''; put(tipEl, content); }
       tipEl.classList.add('on');
       var x = ev.clientX, y = ev.clientY;
@@ -92,14 +97,14 @@
   };
   // a scroll moves the page under a pointer's tooltip, so it goes; a keyboard tooltip follows its element instead
   // (moving focus to a mark off screen scrolls the page)
-  window.addEventListener('scroll', function () {
+  document.addEventListener('scroll', function () { // any scroll: the page's, or the stage's own
     if (tipFocus && document.activeElement === tipFocus) tip.show({ target: tipFocus });
     else tip.hide();
-  }, { passive: true });
+  }, { passive: true, capture: true });
 
   // ------------------------------------------------------------ one panel
   function kit(panel) {
-    var bodyEl = null;
+    var bodyEl = null, onStage = !!panel.closest('.fig-stage');
     var k = {
       el: el, svg: svg, nf: nf, f: f, pct: pct, tip: tip, motion: !reduced.matches,
       color: function (name) { return getComputedStyle(panel).getPropertyValue(name).trim(); },
@@ -108,6 +113,7 @@
         return base + '#' + (tab || 'overview');
       },
       head: function (o) {
+        if (onStage) return el('header'); // the stage's own header names the figure
         var stats = (o.stats || []).map(function (s) {
           return el('div', { class: 'fig-stat' }, el('b', { text: s.value }), el('span', { text: s.label }));
         });
@@ -125,6 +131,7 @@
         return bodyEl;
       },
       notes: function (o) {
+        if (onStage) return el('div'); // the printed figure's caption explains it; the method stays one click away
         var parts = [['What it shows', o.what], ['Why it matters', o.why], ['How to read it', o.read], ['Example', o.example]]
           .filter(function (p) { return p[1]; })
           .map(function (p) { return el('div', { class: 'fig-note' }, el('span', { class: 'fig-note-k', text: p[0] }), el('p', { html: p[1] })); });
@@ -172,6 +179,7 @@
 
   window.FIG = {
     register: function (name, def) { registry[name] = def; },
+    hideTip: function () { tip.hide(); },
     start: start
   };
 

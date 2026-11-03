@@ -11,10 +11,11 @@ site: `index.html` plus `static/`, served by GitHub Pages from the root of `main
   each dot is one term, placed by the meaning of its definitions and coloured by one of 36 topics, as in the
   [MBDef Explorer](https://media-bias-group.github.io/MBDef/#overview). A click on the map opens the Explorer.
 - **The paper's figures** appear as printed: Fig. 1 with the five steps under "How MBDef was built", Figs. 2–6 in the
-  template's carousel. Each has a button that opens its **interactive version** in place, redrawn from the released
-  data: point at a mark for its numbers, click it for the papers or definitions behind it.
+  template's carousel. A click on a printed figure flies it onto a dark stage (a `<dialog>`), where it dissolves into
+  its **interactive version**, redrawn from the released data with almost no words around it: point at a mark for its
+  numbers, click it for the papers or definitions behind it. Arrows step through the six figures; Esc closes.
 - **Links to one figure**: `#fig-pipeline`, `#fig-disciplines`, `#fig-content`, `#fig-coverage`, `#fig-divergence`
-  and `#fig-network` open that figure's interactive version on arrival (the Explorer links to them).
+  and `#fig-network` open that figure on the stage on arrival (the Explorer links to them).
 
 ## Edit the page
 
@@ -29,7 +30,7 @@ affiliations, highlights, abstract, BibTeX and the Explorer's address. Still to 
 |---|---|
 | `index.html` | the page |
 | `static/css/bulma.min.css`, `index.css`, `bulma-carousel.min.css`, `static/js/bulma-carousel.min.js`, `fontawesome.all.min.js`, `static/images/favicon.ico`, the logo | the group's template, unchanged |
-| `static/css/mbdef.css`, `static/js/index.js` | this page's additions: the map panel, the numbers, the five steps, the figure buttons |
+| `static/css/mbdef.css`, `static/js/index.js` | this page's additions: the map panel, the numbers, the five steps, the stage the figures open on |
 | `static/js/map3d.js`, `static/data/points.bin`, `points.json` | the rotating map and its points |
 | `static/images/paper/fig1.png` … `fig6.png` | the paper's figures, cut from its PDF |
 | `static/js/figkit.js`, `static/css/figs.css` | the shared parts of the interactive figures |
